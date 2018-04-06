@@ -6,6 +6,7 @@ bin/
 dist/
 include/
 lib/
+venv/
 
 # Cached python files
 *pycache*
