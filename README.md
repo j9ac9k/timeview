@@ -43,30 +43,29 @@ $ pip install git+https://github.com/lxkain/timeview
 $ timeview
 ```
 
+Starting the Application
+-
+To start TimeView run `timeview` from the terminal.
+
+
+Help
+-
+After the application has started, select "Help" from the Menu, and then "TimeView Help" to learn more.
+
+
 Development Environment
 -
 To configure a development environment to develop timeview, we suggest using `virtualenv`
 
 ```
 $ git clone https://github.com/lxkain/timeview.git timeview
-$ virtualenv timeview -p python3
-$ source timeview/bin/activate
+$ virtualenv timeview/venv -p python3
+$ source timeview/venv/bin/activate
 $ pip install -e timeview
 
-# to install test dependencies
-$ pip install -e "timeview[test]
+# alternatively to install test dependencies
+$ pip install -e "timeview[test]"
 ```
 
 
-Starting the Application
--
-After successful installation,
-you can start the application by running the TimeView Application Launcher or Script that is in the same folder as the installation script.
-(Note that the Application Launcher or scripts should not be moved from their original location; creating shortcuts or links to them should be fine.)
-Advanced users can also run the application from the command line, with optional arguments controlling startup behavior;
-for usage information, add the "-h" switch.
 
-
-Help
--
-After the application has started, select "Help" from the Menu, and then "TimeView Help" to learn more.
