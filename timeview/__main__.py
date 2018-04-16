@@ -4,16 +4,15 @@
 TimeView CLI and GUI Application
 """
 
-import logging
 from pathlib import Path
-import argparse
+from argparse import Namespace, ArgumentParser
 
-# from .api import TimeView
-from timeview.gui import TimeView
+from .gui import TimeView
 
 
-def parse(args):
-    # ENHANCE: think about how to specify CLI loading configurations in a .cfg file
+def parse(args: Namespace):
+    # ENHANCE:
+    # think about how to specify CLI loading configurations in a .cfg file
     if args.configuration == 'default':  # one object per panel
         app = TimeView()
         for i, path in enumerate(args.path):
@@ -28,10 +27,19 @@ def parse(args):
 
 def main():
     configurations = ['default']  # , 'labeling']
-    parser = argparse.ArgumentParser(description=__doc__,
-                                     epilog="© Copyright 2009-2017, TimeView Developers", prog='TimeView')
-    parser.add_argument('-c', '--configuration', type=str, default='default', choices=configurations)
-    parser.add_argument('path', type=str, nargs='*', help='files to load')
+    parser = ArgumentParser(
+                description=__doc__,
+                epilog="© Copyright 2009-2018, TimeView Developers",
+                prog='TimeView')
+    parser.add_argument('-c',
+                        '--configuration',
+                        type=str,
+                        default='default',
+                        choices=configurations)
+    parser.add_argument('path',
+                        type=str,
+                        nargs='*',
+                        help='files to load')
     parser.set_defaults(func=parse)
     args = parser.parse_args()
     args.func(args)

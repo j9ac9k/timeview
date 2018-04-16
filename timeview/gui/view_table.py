@@ -7,8 +7,7 @@ from math import ceil
 # 3rd party
 from qtpy import QtCore, QtGui, QtWidgets
 from qtpy.QtCore import Slot, Signal
-
-from .model import Panel, View
+from timeview.gui.model import Panel, View
 
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
@@ -47,11 +46,11 @@ class ViewTable(QtWidgets.QTableWidget):
 
     def __init__(self,
                  display_panel,
-                 col_widths: Optional[List[int]]=None):
+                 col_widths: Optional[List[int]]=None) -> None:
         super().__init__()
         self.display_panel = display_panel
         self.main_window = self.display_panel.main_window
-        self.panel: Optional[Panel] = None
+        self.panel: Panel = None
         self.columns = ('File',
                         'Type',
                         'Rendering',
@@ -66,8 +65,7 @@ class ViewTable(QtWidgets.QTableWidget):
         self.verticalHeader().hide()
         self.horizontalHeader().setStretchLastSection(False)
         self.horizontalHeader().setSectionsClickable(False)
-        self.horizontalHeader()\
-            .setSectionResizeMode(2, QtWidgets.QHeaderView.Fixed)
+        self.horizontalHeader().setSectionResizeMode(2, QtWidgets.QHeaderView.Fixed)
         self.colWidths.connect(self.main_window.determineColumnWidths)
         self.hidePlot.connect(display_panel.hideView)
         self.showPlot.connect(display_panel.showView)
@@ -85,23 +83,23 @@ class ViewTable(QtWidgets.QTableWidget):
     def colNameToIndex(self, name: str) -> int:
         return self.columns.index(name)
 
-    def loadPanel(self, panel_obj: Panel):
+    def loadPanel(self, panel_obj: Panel) -> None:
         self.setRowCount(0)
         assert isinstance(panel_obj, Panel)
         self.panel = panel_obj
         for view in panel_obj.views:
             self.addView(view)
 
-    def delView(self, view_to_remove):
+    def delView(self, view_to_remove: View) -> None:
         """Remove the selected views from the panel"""
         row_to_remove = self.selectedRow()
-        assert row_to_remove == self.panel.views.index(view_to_remove)
+        # assert row_to_remove == self.panel.views.index(view_to_remove)
         if row_to_remove is None:
             return
         self.removeRow(row_to_remove)
         self.calcColumnWidths()
 
-    def selectedView(self) -> Optional[View]:
+    def selectedView(self) -> View:
         """Returns the currently selected view"""
         if not self.selectedIndexes():
             logger.warning('Selected Indexes returned nothing')
@@ -113,7 +111,8 @@ class ViewTable(QtWidgets.QTableWidget):
             row = self.selectedIndexes()[0].row()
             return row
         elif self.rowCount() > 0:
-            logger.error('Rows exist but no row selected, selecting last row as guess')
+            logger.error('Rows exist but no row selected, \
+                         selecting last row as guess')
             row = self.panel.views.index(self.panel.selected_view - 1)
             self.selectRow(row)
             return row
@@ -132,7 +131,7 @@ class ViewTable(QtWidgets.QTableWidget):
                     self.selectRow(row, bypass=False)
                 else:
                     logger.error('No selected row, no model.Panel.selected_view either')
-                    self.panel.set_selected_view(self.panel.views[self.rowCount() - 1])
+                    self.panel.set_selected_view(self.panel.views[self.rowCount()-1])
                     row = self.panel.views.index(self.panel.selected_view)
                     self.selectRow(row, bypass=False)
 
@@ -326,30 +325,42 @@ class ViewTable(QtWidgets.QTableWidget):
                 continue
             linkAction = QtWidgets.QAction(f'Link to Panel {index + 1}',
                                            self)
-            linkAction.triggered.connect(partial(self.display_panel.linkTrack, view, index))
+            linkAction.triggered.connect(partial(self.display_panel.linkTrack,
+                                                 view,
+                                                 index))
             link_menu.addAction(linkAction)
 
             moveAction = QtWidgets.QAction(f'Move To Panel {index + 1}',
                                            self)
-            moveAction.triggered.connect(partial(self.display_panel.moveView, view, index))
+            moveAction.triggered.connect(partial(self.display_panel.moveView,
+                                                 view,
+                                                 index))
             move_menu.addAction(moveAction)
 
             copyAction = QtWidgets.QAction(f'Copy to Panel {index + 1}',
                                            self)
-            copyAction.triggered.connect(partial(self.display_panel.copyView, view, index))
+            copyAction.triggered.connect(partial(self.display_panel.copyView,
+                                                 view,
+                                                 index))
             copy_menu.addAction(copyAction)
 
         moveAction = QtWidgets.QAction(f'Move to New Panel',
                                        self)
-        moveAction.triggered.connect(partial(self.display_panel.moveView, view, -1))
+        moveAction.triggered.connect(partial(self.display_panel.moveView,
+                                             view,
+                                             -1))
 
         linkAction = QtWidgets.QAction(f'Link to New Panel',
                                        self)
-        linkAction.triggered.connect(partial(self.display_panel.linkTrack, view, -1))
+        linkAction.triggered.connect(partial(self.display_panel.linkTrack,
+                                             view,
+                                             -1))
 
         copyAction = QtWidgets.QAction(f'Copy to New Panel',
                                        self)
-        copyAction.triggered.connect(partial(self.display_panel.copyView, view, -1))
+        copyAction.triggered.connect(partial(self.display_panel.copyView,
+                                             view,
+                                             -1))
 
         move_menu.addSeparator()
         link_menu.addSeparator()

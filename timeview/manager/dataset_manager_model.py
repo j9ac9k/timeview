@@ -1,14 +1,14 @@
 from typing import List
 import unittest
 
-from sqlalchemy import Column, Integer, String, Float, ForeignKey
+from sqlalchemy import Column, Integer, String, ForeignKey
 from sqlalchemy.ext.declarative import declarative_base, declared_attr
 from sqlalchemy.orm import relationship, sessionmaker
 
 Base = declarative_base()
 
 
-class Mixin(object):
+class Mixin:
     @declared_attr
     def __tablename__(cls):  # table name is lowercase class name
         return cls.__name__.lower()
@@ -33,7 +33,8 @@ class Mixin(object):
 class Dataset(Base, Mixin):
     name = Column(String, unique=True, nullable=False)
     # parameter = Column(Float, nullable=False)
-    file = relationship('File', back_populates='dataset', cascade='all, delete, delete-orphan')  # cascade configuration
+    # cascade configuration
+    file = relationship('File', back_populates='dataset', cascade='all, delete, delete-orphan')
     columns = ['name']
 
 
@@ -86,8 +87,8 @@ class Model(object):
 
     def get_dataset(self, dataset_id=None) -> Dataset:
         """
-        returns links to the database objects, 
-        allowing read, and write access for updating 
+        returns links to the database objects,
+        allowing read, and write access for updating
         - this needs model.session.commit() afterwards
         """
         q = self.session.query(Dataset)
@@ -115,11 +116,11 @@ class TestModel(unittest.TestCase):
                                echo=False)  # memory-based db
         self.model = Model(engine)
 
-    def test_morebase(self):
-        d = Dataset(name='one', parameter=0)
-        f = File(path='file_path')
-        s = str(d)
-        s = str(f)
+    # def test_morebase(self):
+        # d = Dataset(name='one', parameter=0)
+        # f = File(path='file_path')
+        # s = str(d)
+        # s = str(f)
 
     def test_allthethings(self):
         from sqlalchemy.exc import IntegrityError, StatementError
@@ -135,7 +136,7 @@ class TestModel(unittest.TestCase):
             model.add_dataset(Dataset(name=None, parameter=0))  # not nullable
         model.session.rollback()
         d = Dataset(name='one', parameter=0)
-        self.assertTrue(d.id == None)
+        self.assertTrue(d.id is None)
         model.add_dataset(d)
         self.assertTrue(d.id == 1)
         with self.assertRaises(IntegrityError):

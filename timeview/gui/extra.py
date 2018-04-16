@@ -3,7 +3,7 @@ from qtpy import QtWidgets, QtGui
 
 class Widget(QtWidgets.QWidget):
 
-    def __init__(self, text: str="", panel_info=None):
+    def __init__(self, text: str="", panel_info=None) -> None:
         super().__init__()
         layout = QtWidgets.QVBoxLayout()
         self.label = QtWidgets.QLabel(f"Hello, I'm {text}!")

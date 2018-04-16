@@ -1,8 +1,7 @@
 import logging
 from typing import Dict, Tuple, Union, Optional
-import time
 
-from qtpy import QtWidgets, QtCore, QtGui
+from qtpy import QtWidgets, QtCore
 from qtpy.QtCore import Slot, Signal
 
 # TODO remove pyqt5 dependency (see issue #41)
@@ -10,8 +9,8 @@ from qtpy.QtCore import Slot, Signal
 from PyQt5 import QtHelp
 
 from .rendering import Renderer
-from ..dsp.tracking import Track
-from ..dsp import processing
+from timeview.dsp.tracking import Track
+from timeview.dsp import processing
 
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
@@ -23,7 +22,7 @@ class ProcessingError(Exception):
 
 class RenderDialog(QtWidgets.QDialog):
 
-    def __init__(self, display_panel, renderer: Renderer):
+    def __init__(self, display_panel, renderer: Renderer) -> None:
         super().__init__()
         self.renderer = renderer
         self.panel = display_panel
@@ -77,7 +76,7 @@ class ProcessingDialog(QtWidgets.QDialog):
 
     def __init__(self,
                  parent,
-                 processor: processing.Processor):
+                 processor: processing.Processor) -> None:
         super().__init__(parent)
         self.setModal(False)
         self.parent = parent
@@ -266,13 +265,18 @@ class Bug(QtWidgets.QDialog):
         self.app = app
         import traceback
         self.setWindowTitle('Bug Report')
-        traceback_list = traceback.format_exception(exc_type, exc_value, exc_traceback)
-        self.traceback = ''.join([element.rstrip() + '\n' for element in traceback_list])
-        self.buttonBox = QtWidgets.QDialogButtonBox(QtWidgets.QDialogButtonBox.Ok)
+        traceback_list = traceback.format_exception(exc_type,
+                                                    exc_value,
+                                                    exc_traceback)
+        self.traceback = ''.join([element.rstrip() + '\n'
+                                  for element in traceback_list])
+        self.buttonBox =\
+            QtWidgets.QDialogButtonBox(QtWidgets.QDialogButtonBox.Ok)
         self.buttonBox.accepted.connect(self.accept)
         copyButton = QtWidgets.QPushButton('Copy To Clipboard')
         copyButton.pressed.connect(self.copyToClipboard)
-        self.buttonBox.addButton(copyButton, QtWidgets.QDialogButtonBox.ApplyRole)
+        self.buttonBox.addButton(copyButton,
+                                 QtWidgets.QDialogButtonBox.ApplyRole)
 
         main_layout = QtWidgets.QVBoxLayout()
         self.textEdit = QtWidgets.QTextEdit()
@@ -294,7 +298,9 @@ class Bug(QtWidgets.QDialog):
 
 
 class HelpBrowser(QtWidgets.QTextBrowser):
-    def __init__(self, help_engine: QtHelp.QHelpEngine, parent: QtWidgets.QWidget=None):
+    def __init__(self,
+                 help_engine: QtHelp.QHelpEngine,
+                 parent: QtWidgets.QWidget=None) -> None:
         super().__init__(parent)
         self.help_engine = help_engine
 
@@ -330,7 +336,7 @@ class ProcessorThread(QtCore.QThread):
     def __init__(self,
                  processor: processing.Processor,
                  callback,
-                 update_process_bar):
+                 update_process_bar) -> None:
         super().__init__()
         self.finished.connect(callback)
         self.processor = processor
@@ -343,10 +349,11 @@ class ProcessorThread(QtCore.QThread):
 
     def process(self) -> Tuple[Union[processing.Tracks]]:
         try:
-            new_track_list = self.processor.process(progressTracker=self.progressTracker)
+            new_track_list =\
+                self.processor.process(progressTracker=self.progressTracker)
         except Exception as e:
             logging.exception("Processing Error")
-            logging.exception(e)
+            logging.exception(str(e))
             self.exit()
             # TODO: how do we want to handle processing errors?
             raise ProcessingError

@@ -7,7 +7,6 @@
 # TODO: integrate with timeview GUI
 
 # STL
-import sys
 import logging
 from pathlib import Path
 
@@ -29,6 +28,7 @@ logger = logging.getLogger(__name__)
 
 ENGINE_PATH = 'sqlite:///' + str(Path(__file__).with_name('dataset.db'))
 
+
 class TableModel(QtCore.QAbstractTableModel):
     # see also for alchemical model gist
     # https://gist.github.com/harvimt/4699169
@@ -48,7 +48,7 @@ class TableModel(QtCore.QAbstractTableModel):
     # def parent(self, child):
         # return 0
 
-    def rowCount(self, _parent=None):
+    def rowCount(self, parent=None, *args, **kwargs):
         return len(self.qry)
 
     def columnCount(self, _parent=None):
@@ -115,8 +115,6 @@ class TableModelFile(TableModel):
         self.qry = self.model.get_file(None, dataset_id=self.dataset_id)
 
 
-
-
 class ManagerWindow(QMainWindow):
     def __init__(self, title, parent=None):
         super(ManagerWindow, self).__init__(parent)
@@ -138,7 +136,7 @@ class ManagerWindow(QMainWindow):
         self.tableViewDataset.clicked.connect(self.clicked_dataset)
         self.tableViewFile.doubleClicked.connect(self.double_clicked_file)
 
-        #self.installEventFilter(self)
+        # self.installEventFilter(self)
 
         # Icons
         self.addDatasetButton.setIcon(qta.icon('fa.plus'))
@@ -202,7 +200,7 @@ class ManagerWindow(QMainWindow):
         # app.add_view(1, lab_obj)  # linked
         # app.start()
         ##########
-        #self.viewer.show()
+        # self.viewer.show()
 
     def add_dataset(self, _e):
         while True:
@@ -212,7 +210,7 @@ class ManagerWindow(QMainWindow):
             if ok:
                 try:
                     # TODO: how to set defaults?
-                    self.model.add_dataset(Dataset(name=name)) #parameter=0))
+                    self.model.add_dataset(Dataset(name=name))  # parameter=0))
                 except IntegrityError:
                     self.model.session.rollback()
                     QMessageBox.information(self,

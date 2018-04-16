@@ -53,7 +53,7 @@ setup(
         'dev': [
             "numpydoc",
             "flake8",
-            "mypy",
+            "flake8-mypy",
             "pylint"
         ],
         'test': test_requirements

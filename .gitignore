@@ -14,6 +14,8 @@ venv/
 .cache
 .coverage*
 *.egg-info
+.eggs
+.mypy_cache
 
 # Folder preview
 .DS_Store
@@ -22,7 +24,7 @@ Thumbs.db
 
 # IDE Related
 .idea
-.code
+.vscode
 
 # App files
 timeview/gui/config.json
@@ -30,6 +32,7 @@ timeview/manager/dataset.db
 
 # git .orig files
 *.orig
-.eggs
-.mypy_cache
+
+
+
 

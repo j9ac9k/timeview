@@ -11,7 +11,7 @@ class Track(object):  # Deriving from DataArray is not well-supported for versio
                  coords: Dict[str, np.ndarray]=None,
                  dims=None,
                  name: str=None,
-                 attrs: dict=None):
+                 attrs: dict=None) -> None:
         if attrs is None:
             attrs = {'fs': fs}
         else:
@@ -46,7 +46,7 @@ class Signal(Track):
                  coords=None,
                  dims=None,
                  name: str=None,
-                 attrs: dict=None):
+                 attrs: dict=None) -> None:
         assert data.ndim == 2
         if coords is None:
             if dims is None:
@@ -68,7 +68,7 @@ class Event(Track):
                  time: np.ndarray,
                  fs: int,
                  name: str=None,
-                 attrs: dict=None):
+                 attrs: dict=None) -> None:
         if data is None:
             data = np.ones((len(time), 1), dtype=bool)
         assert data.ndim == 2
@@ -86,7 +86,7 @@ class Segmentation(Track):
                  time: np.ndarray,
                  fs: int,
                  name: str=None,
-                 attrs: dict=None):
+                 attrs: dict=None) -> None:
         assert data.ndim == 2
         assert data.shape[1] == 1
         assert time.ndim == 1
@@ -99,8 +99,6 @@ class Segmentation(Track):
             raise ValueError
         assert len(time) == len(data)  # format is time-position and data-label associated with it
         Track.__init__(self, data, fs, coords={'time': time}, dims=('time', 'label'), name=name, attrs=attrs)
-
-
 
 
 dat = np.arange(10).reshape(-1, 1) + 10  # should be in format time x value = N x 1

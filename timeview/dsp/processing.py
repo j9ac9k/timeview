@@ -1,7 +1,6 @@
 import logging
-from abc import ABCMeta, abstractmethod
-from pathlib import Path
-from typing import List, Tuple, Dict, Optional, Union, Callable
+from abc import ABCMeta
+from typing import Tuple, Dict, Union, Callable
 
 import numpy as np
 from scipy import signal
@@ -63,8 +62,7 @@ class Processor(metaclass=ABCMeta):
                                                          .lstrip('[('),
                                                          sep=' ')
                 else:
-                    self.parameters[key] =\
-                        type(self.parameters[key])(parameters[key])
+                    self.parameters[key] = type(self.parameters[key])(parameters[key])
         except Exception as e:
             raise InvalidParameterError(e)
         # additional parameter checking can be performed here
@@ -212,7 +210,7 @@ class SpectralDiscontinuityEstimator(Processor):
         self.parameters = {'frame_size': 0.005,  # seconds, determines freq res.
                            'NFFT': 256,
                            'normalized': 1,
-                           'delta_order':1}
+                           'delta_order': 1}
 
     def process(self, **kwargs) -> Tuple[tracking.TimeValue]:
         Processor.process(self, **kwargs)
@@ -247,11 +245,11 @@ class SpectralDiscontinuityEstimator(Processor):
         temp_array[win_width:N+win_width] = ftr
         for w in range(win_width):
             temp_array[w, :] = ftr[0, :]
-            temp_array[N+win_width+w,:] = ftr[-1,:]
+            temp_array[N+win_width+w, :] = ftr[-1, :]
 
         for i in range(N):
             for w in range(win_length):
-                delta_array[i, :] += temp_array[i+w,:] * dynamic_win[w]
+                delta_array[i, :] += temp_array[i+w, :] * dynamic_win[w]
         value = np.mean(np.diff(delta_array, axis=0) ** 2, axis=1) ** 0.5
         dis = tracking.TimeValue(time, value, wav.fs, wav.duration, path=wav.path.with_name(wav.path.stem + '-discont')
                                  .with_suffix(tracking.TimeValue
@@ -262,7 +260,6 @@ class SpectralDiscontinuityEstimator(Processor):
         dis.label = 'spectral discontinuity'
         self.progressTracker.update(100)
         return dis,
-
 
 
 class NoiseReducer(Processor):
@@ -279,7 +276,8 @@ class NoiseReducer(Processor):
         inp = self.data['wave']
         inp = inp.convert_dtype(np.float64)
         self.progressTracker.update(20)
-        out = dsp.spectral_subtract(inp, self.parameters['frame_rate'], self.parameters['silence_percentage'])  # TODO: pull this up into here
+        # TODO: pull this up into here
+        out = dsp.spectral_subtract(inp, self.parameters['frame_rate'], self.parameters['silence_percentage'])
         self.progressTracker.update(90)
         out.path = inp.path.with_name(inp.path.stem + '-denoised').with_suffix(
                                       tracking.Wave.default_suffix)
@@ -355,8 +353,8 @@ class F0Analyzer(Processor):
             (2 / self.parameters['f0_min']), 'frame_size must be > 2 / f0_min'
 
     def process(self, **kwargs) -> Tuple[tracking.TimeValue,
-                               tracking.TimeValue,
-                               tracking.Partition]:
+                                         tracking.TimeValue,
+                                         tracking.Partition]:
         Processor.process(self, **kwargs)
         wav = self.data['wave']
         wav = wav.convert_dtype(np.float64)
@@ -470,7 +468,7 @@ class PeakTracker(Processor):
                                         tracking.TimeValue.default_suffix))
         trk.min = 0
         trk.max = wav.fs / 2
-        trk.unit ='Hz'
+        trk.unit = 'Hz'
         trk.label = 'frequency'
         return trk,
 
@@ -488,44 +486,3 @@ class PeakTrackerActiveOnly(PeakTracker):
                 b = np.searchsorted(peak.time / peak.fs, active.time[i+1] / active.fs)
                 peak.value[a:b] = np.nan
         return peak,
-
-
-# from rpy2 import robjects
-# from rpy2.robjects.packages import SignatureTranslatedAnonymousPackage
-# class ExampleR(Processor):
-#     name = 'Example R plug-in'
-#     acquire = {'activity partition': tracking.Partition,
-#                'peak track': tracking.TimeValue}
-#
-#     def __init__(self):
-#         super().__init__()
-#         self.parameters = {'some': 0}
-#
-#     def process(self, **kwargs) -> Tuple[tracking.Partition]:
-#         Processor.process(self, **kwargs)
-#         par: tracking.Partition = self.data['activity partition']
-#         tmv: tracking.TimeValue = self.data['peak track']
-#         fs = max(par.fs, tmv.fs)
-#         par = par.resample(fs)
-#         tmv = tmv.resample(fs)
-#         self.progressTracker.update(10)
-#         with open(Path(__file__).resolve().parent / 'example.R') as f:
-#             script = f.read()
-#         self.progressTracker.update(11)
-#         pack = SignatureTranslatedAnonymousPackage(script, 'pack')
-#         self.progressTracker.update(12)
-#         pack.setup()
-#         self.progressTracker.update(13)
-#         value =\
-#             pack.predict_rodent_class(robjects.FloatVector(par.time / par.fs),
-#                                       robjects.FloatVector(par.value),
-#                                       robjects.FloatVector(tmv.time / tmv.fs),
-#                                       robjects.FloatVector(tmv.value),
-#                                       par.fs)
-#         self.progressTracker.update(90)
-#         par = tracking.Partition(par.time, np.array(value), fs=fs,
-#                                  path=par.path
-#                                  .with_name(par.path.stem + '-class')
-#                                  .with_suffix(
-#                                      tracking.Partition.default_suffix))
-#         return par,

@@ -28,7 +28,7 @@ class Spacer(QtWidgets.QWidget):
 
 class Handle(Spacer):
 
-    def __init__(self, parent, label: str='test'):
+    def __init__(self, parent, label: str='test') -> None:
         super().__init__()
         self.setParent(parent)
         self.setFixedWidth(30)
@@ -41,7 +41,7 @@ class Handle(Spacer):
 
     @Slot(name='update_label')
     def updateLabel(self):
-        panel_obj = self.parent().panel
+        panel_obj: Optional[Panel] = self.parent().panel
         if panel_obj is None:
             return
         index = self.parent().main_window.model.panels.index(panel_obj)
@@ -147,7 +147,8 @@ class Frame(QtWidgets.QFrame):
         return QtCore.QSize(800, 400)  # TODO: read from config file?
 
     def sizeHint(self) -> QtCore.QSize:
-        return QtCore.QSize(1200, 500)  # TODO: read from config file? (One or the other)
+        # TODO: read from config file? (One or the other)
+        return QtCore.QSize(1200, 500)
 
     def increaseSize(self, increment: int=50):
         self.n += increment
@@ -172,7 +173,7 @@ class Frame(QtWidgets.QFrame):
         if event.button() == QtCore.Qt.LeftButton:
             self.dragStartPos = event.pos()
 
-    def mouseMoveEvent(self, event: QtGui.QMouseEvent):
+    def mouseMoveEvent(self, event: QtGui.QMouseEvent) -> None:
         if event.buttons() != QtCore.Qt.LeftButton:
             event.ignore()
             return
@@ -185,7 +186,7 @@ class Frame(QtWidgets.QFrame):
         mime_data.setObjectName('frame')
         drag = QtGui.QDrag(self)
         drag.setMimeData(mime_data)
-        drop_action = drag.exec_(QtCore.Qt.MoveAction)
+        drag.exec_(QtCore.Qt.MoveAction)
 
     def dropEvent(self, event: QtGui.QDropEvent):
         if event.mimeData().objectName() == 'frame':
@@ -215,7 +216,7 @@ class DisplayPanel(QtWidgets.QWidget):
     viewMoved = Signal(int, name='viewMoved')
 
     def __init__(self,
-                 frame: Frame):
+                 frame: Frame) -> None:
         super().__init__()
         layout = QtWidgets.QHBoxLayout()
         layout.setContentsMargins(1, 1, 1, 1)
@@ -224,7 +225,8 @@ class DisplayPanel(QtWidgets.QWidget):
         self.panel: Optional[Panel] = None
         self.setParent(frame)
         self.select_me.connect(frame.select_me)
-        self.main_window = self.parent().parent()  # can't static type this because can't import viewer.py (circular)
+        self.main_window = self.parent().parent()
+        # can't static type this because can't import viewer.py (circular)
         self.view_table = ViewTable(self, self.main_window.column_width_hint)
 
         # View Table

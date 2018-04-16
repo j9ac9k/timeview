@@ -13,7 +13,9 @@ from . import tracking
 
 # TODO: make this "tracking"-free (?), and all times are in samples
 
-# def segment_talkbox(a: np.ndarray, length: int, overlap: int = 0) -> np.ndarray:
+# def segment_talkbox(a: np.ndarray,
+#                     length: int,
+#                     overlap: int = 0) -> np.ndarray:
 #     # originally from talkbox.segmentaxis
 #     a = np.ravel(a)  # may copy
 #     l = a.shape[0]
@@ -101,7 +103,7 @@ def frame(wav: tracking.Wave,
     return tracking.TimeValue(time, value, wav.fs, wav.duration, path=wav.path)  # adjust path name here?
 
 
-#@numba.jit(nopython=True, cache=True)  # we need polymorphism here
+# @numba.jit(nopython=True, cache=True)  # we need polymorphism here
 def frame_centered(signal: np.ndarray, time: np.ndarray, frame_size: int) -> np.ndarray:
     assert time.ndim == 1
     # no further assumptions on time - doesn't have to be sorted or inside signal
@@ -127,12 +129,11 @@ def frame_centered(signal: np.ndarray, time: np.ndarray, frame_size: int) -> np.
             else:
                 right_avail = right_frame_size
             if 0 <= center <= S:
-                value[f, left_frame_size - left_avail:left_frame_size + right_avail] = signal[center - left_avail: center + right_avail]
+                value[f, left_frame_size - left_avail:left_frame_size + right_avail] =\
+                    signal[center - left_avail: center + right_avail]
     assert value.shape[0] == len(time)
     assert value.shape[1] == frame_size
     return value  # adjust path name here?
-
-
 
 
 @numba.jit(nopython=True, cache=True)  # we need polymorphism here
@@ -208,8 +209,8 @@ def spectrogram_centered(wav: tracking.Wave,  # used by rendering
     if normalized:
         M[:] = (M.T - np.min(M, axis=1)).T
         M[:] = (M.T / np.max(M, axis=1)).T
-        #assert np.all(M.min(axis=1) == 0)
-        #assert np.all(M.max(axis=1) == 1)
+        # assert np.all(M.min(axis=1) == 0)
+        # assert np.all(M.max(axis=1) == 1)
     frequency = np.arange(M.shape[1]) / M.shape[1] * wav.fs / 2
     return M, frequency
 
@@ -222,7 +223,7 @@ def correlate_fft(X: np.ndarray):
     # show relationship to related methods
     assert np.allclose(R[0], np.correlate(X[0], X[0], mode='full')[D - 1:])
     # assert np.allclose(r, np.convolve(x, x[::-1], mode='full')[n - 1:])
-    from scipy.signal import fftconvolve
+    # from scipy.signal import fftconvolve
     # assert np.allclose(r, fftconvolve(x, x[::-1], mode='full')[n - 1:])
     return R
 
@@ -251,5 +252,3 @@ def correlogram(wav: tracking.Wave, frame_size: float, frame_rate: float, normal
 def nextpow2(i: Union[int, float]) -> int:
     """returns the first P such that 2**P >= abs(N)"""
     return int(ceil(log2(i)))
-
-

@@ -4,7 +4,8 @@ import numpy as np
 import numba
 
 
-@numba.jit((numba.float64[:, :], numba.float64), nopython=True, cache=True)  # eager compilation through function signature
+# eager compilation through function signature
+@numba.jit((numba.float64[:, :], numba.float64), nopython=True, cache=True)
 def search_smooth(ftr, smooth):  # 100% function-based
     """P is the number of candidates at each time
     T is the number of available time points"""
@@ -13,9 +14,12 @@ def search_smooth(ftr, smooth):  # 100% function-based
     assert P < 65536  # could adjust dtype automatically, currently set at uint16
     trans = np.empty(P)
     zeta = np.empty(P)
-    score = np.empty((2, P))  # one row for previous, and one for current score (no tracking for all t, saving memory)
-    path = np.zeros((T, P), np.uint16) - 1  # often this matrix has less than %1 of meaningful entries, could be made sparse
-    seq = np.zeros(T, np.uint16) - 1  # the - 1 (really: 65535) helps catch bugs
+    # one row for previous, and one for current score (no tracking for all t, saving memory)
+    score = np.empty((2, P))
+    # often this matrix has less than %1 of meaningful entries, could be made sparse
+    path = np.zeros((T, P), np.uint16) - 1
+    # the - 1 (really: 65535) helps catch bugs
+    seq = np.zeros(T, np.uint16) - 1
     # forward
     for t in range(T):
         # print(t, T)

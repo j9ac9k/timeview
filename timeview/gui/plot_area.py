@@ -1,5 +1,5 @@
 import logging
-from typing import Dict, Optional
+from typing import Dict
 from math import ceil
 import sys
 
@@ -31,8 +31,8 @@ class DumbPlot(pg.GraphicsView):
                                                self.main_window.axis_width)
 
         # Variables
-        self.axes: Optional[Dict[View, pg.AxisItem]] = {}
-        self.vbs: Optional[Dict[View, pg.ViewBox]] = {}
+        self.axes: Dict[View, pg.AxisItem] = {}
+        self.vbs: Dict[View, pg.ViewBox] = {}
 
         self.main_plot = pg.PlotItem(enableMenu=False)
         self.main_plot.hideButtons()
@@ -74,7 +74,6 @@ class DumbPlot(pg.GraphicsView):
         self.layout.update()
         self.axis_bottom.hide()
 
-
     def wheelEvent(self, event: QtGui.QWheelEvent):
         super().wheelEvent(event)
         event.accept()
@@ -83,7 +82,8 @@ class DumbPlot(pg.GraphicsView):
         if self.selected_view() not in self.vbs.keys():
             return
         vb = self.vbs[self.selected_view()]
-        pos = event[0]  # using signal proxy turns original arguments into a tuple
+        # using signal proxy turns original arguments into a tuple
+        pos = event[0]
         if not self.main_plot.sceneBoundingRect().contains(pos):
             return
         mousePoint = vb.mapSceneToView(pos)
@@ -250,7 +250,7 @@ class DumbPlot(pg.GraphicsView):
             view_box.blockSignals(True)
             if view_box.geometry() != self.main_vb.sceneBoundingRect():
                 view_box.setGeometry(self.main_vb.sceneBoundingRect())
-            view_box.setLimits(minXRange=minXRange) # applying max zoom
+            view_box.setLimits(minXRange=minXRange)  # applying max zoom
             view_box.setXRange(x_min, x_max, padding=0)
             view_box.blockSignals(False)
         self.axis_bottom.setRange(x_min, x_max)

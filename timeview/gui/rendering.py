@@ -1,16 +1,15 @@
 import logging
 from abc import ABCMeta, abstractmethod
-from pathlib import Path
-from typing import List, Union, Tuple, Optional, Type, Dict
+from typing import List, Union, Tuple, Optional, Dict, Type, TypeVar
 from math import floor, ceil
-from timeit import default_timer as timer
+# from timeit import default_timer as timer
 
 import numpy as np
 import pyqtgraph as pg
 from qtpy import QtCore, QtGui, QtWidgets
 from qtpy.QtCore import Slot, Signal
 
-from ..dsp import tracking, dsp, processing
+from timeview.dsp import tracking, dsp, processing
 from .plot_objects import InfiniteLinePlot
 
 logger = logging.getLogger()
@@ -69,20 +68,22 @@ class LabelEventFilter(QtCore.QObject):
 
 
 class Renderer(metaclass=ABCMeta):  # MixIn
-    accepts = tracking.Track
-    z_value: int = 0
+    accepts: Union[Type[tracking.Track],
+                   Type[tracking.Partition],
+                   Type[tracking.Event],
+                   Type[tracking.Value]] = NotImplemented
+    z_value = 0
     name = 'metaclass'
 
     def __init__(self, *args, **parameters):
-        self.track: Optional[processing.Tracks] = None
-        self.view = None
+        self.track: processing.Tracks = None
+        self.view: 'View' = None
         self.item: Union[pg.PlotItem,
                          pg.PlotCurveItem,
                          pg.ImageItem,
-                         InfiniteLinePlot,
-                         None] = None
-        self.ax: Optional[pg.AxisItem] = None
-        self.vb: Optional[pg.ViewBox] = None
+                         InfiniteLinePlot] = None
+        self.ax: pg.AxisItem = None
+        self.vb: pg.ViewBox = None
         self.segments: List[pg.InfiniteLine] = []
         self.names: List[pg.TextItem] = []
         self.filter: Optional[QtCore.QObject] = None
@@ -97,7 +98,7 @@ class Renderer(metaclass=ABCMeta):  # MixIn
     def __str__(self) -> str:
         return self.name
 
-    def set_track(self, track: accepts):
+    def set_track(self, track):
         self.track = track
 
     def set_view(self, view, **kwargs):
@@ -108,7 +109,7 @@ class Renderer(metaclass=ABCMeta):  # MixIn
         self.parameters = {**self.parameters, **kwargs}
 
     def set_parameters(self, parameters: Dict[str, str]) -> None:
-        old_parameters = self.parameters
+        # old_parameters = self.parameters
         if __debug__:
             for name, value in parameters.items():
                 logging.debug(f'Received parameter {name} of value {value}')
@@ -158,7 +159,9 @@ class Renderer(metaclass=ABCMeta):  # MixIn
         return f'#{pg.colorStr(q_color)[:6]}'
 
     def setAxisLabel(self):
-        self.ax.setLabel(self.track.label, color=self.strColor(), units=self.track.unit)
+        self.ax.setLabel(self.track.label,
+                         color=self.strColor(),
+                         units=self.track.unit)
 
     def configNewAxis(self):
         assert isinstance(self.ax, pg.AxisItem)
@@ -204,7 +207,7 @@ class Renderer(metaclass=ABCMeta):  # MixIn
     @abstractmethod
     def reload(self):
         """clears current plot items, and reloads the track"""
-        
+
     @abstractmethod
     def perRendererParameterProcessing(self, parameters):
         """depending on what the parameters changed call different methods"""
@@ -235,18 +238,18 @@ class Renderer(metaclass=ABCMeta):  # MixIn
                           yMax=self.parameters['y_max'])
 
 
-def get_renderer_classes(accepts: Optional[tracking.Track] = None) \
-        -> List[Type[Renderer]]:
-    def all_subclasses(c: Type[Renderer]):
-        return c.__subclasses__() + [a for b in c.__subclasses__()
-                                     for a in all_subclasses(b)]
+BaseRenderer = TypeVar('BaseRenderer', bound=Renderer)
+
+
+def get_renderer_classes(accepts: Optional[tracking.Track] = None) -> List[Type[Renderer]]:
+
+    def all_subclasses(c) -> List[Type[Renderer]]:
+        return c.__subclasses__() + [a for b in c.__subclasses__() for a in all_subclasses(b)]
 
     if accepts is None:
-        return [obj for obj in all_subclasses(Renderer)
-                if obj.accepts is not None]
+        return [obj for obj in all_subclasses(Renderer) if obj.accepts is not None]
     else:
-        return [obj for obj in all_subclasses(Renderer)
-                if obj.accepts == accepts]
+        return [obj for obj in all_subclasses(Renderer) if obj.accepts == accepts]
 
 
 # first renderer will be the default for that track type
@@ -269,7 +272,7 @@ class Waveform(Renderer):
     def reload(self):
         # TODO: waveform needs some kind of update scheme
         pass
-    
+
     def perRendererParameterProcessing(self, parameters):
         # TODO: look at parameters and modify things accordingly
         pass
@@ -325,8 +328,9 @@ class Waveform(Renderer):
                 chunk_len = chunk.shape[0]
                 visible[target_pointer:target_pointer + chunk_len * 2:2] =\
                     chunk_min
-                visible[1 + target_pointer:1 + target_pointer + chunk_len * 2:2] =\
-                    chunk_max
+                visible[1 + target_pointer:
+                        1 + target_pointer + chunk_len * 2:
+                        2] = chunk_max
                 target_pointer += chunk_len * 2
             visible = visible[:target_pointer]
         self.item.setData(x=np.linspace(start,
@@ -362,10 +366,11 @@ class Spectrogram(Renderer):
         # TODO: make some kind of reload method for the spectrogram
         pass
 
-    def set_track(self, track: accepts):
+    def set_track(self, track):
         logging.info('setting spectrogram track')
         super().set_track(track)
-        #self.set_parameters(self.parameters)  # TODO: discuss this
+        # TODO: discuss this
+        # self.set_parameters(self.parameters)
         self.compute_initial_levels()
 
     def compute_initial_levels(self):
@@ -374,7 +379,9 @@ class Spectrogram(Renderer):
             self.vmax = 1
         else:
             half = self.parameters['frame_size'] * self.track.fs // 2
-            centers = np.round(np.linspace(half, self.track.duration - half, 1000)).astype(np.int)
+            centers = np.round(np.linspace(half,
+                                           self.track.duration - half,
+                                           1000)).astype(np.int)
             X, f = dsp.spectrogram_centered(self.track,
                                             self.parameters['frame_size'],
                                             centers,
@@ -420,7 +427,7 @@ class Spectrogram(Renderer):
         self.plot_area.main_vb.sigResized.disconnect(self.generatePlotData)
 
     def generatePlotData(self):
-        start = timer()
+        # start = timer()
         if not self.vb or not self.vb.width():
             return
         screen_geometry = self.vb.screenGeometry()
@@ -430,7 +437,8 @@ class Spectrogram(Renderer):
         t_min, t_max = self.vb.viewRange()[0]
 
         # determine frame_rate and NFFT automatically
-        NFFT = 2 ** max(dsp.nextpow2(screen_geometry.height() * 2), int(np.ceil(np.log2(self.parameters['frame_size'] * fs))))
+        NFFT = 2 ** max(dsp.nextpow2(screen_geometry.height() * 2),
+                        int(np.ceil(np.log2(self.parameters['frame_size'] * fs))))
         centers = np.round(np.linspace(t_min, t_max, screen_geometry.width(),
                                        endpoint=True) * fs).astype(np.int)
         # this computes regions that are sometimes grossly out of range...
@@ -447,16 +455,13 @@ class Spectrogram(Renderer):
             # TODO: how about calculating this after setting the render params?
             top = np.searchsorted(f, self.parameters['y_max'])
             bottom = np.searchsorted(f, self.parameters['y_min'])
-            self.item.setImage(image=np.fliplr(-X[:, bottom:top]), levels=[-self.vmax, -self.vmin])
+            self.item.setImage(image=np.fliplr(-X[:, bottom:top]),
+                               levels=[-self.vmax, -self.vmin])
 
             rect = self.vb.viewRect()
             rect.setBottom(f[bottom])
             rect.setTop(f[top-1])
             self.item.setRect(rect)
-            # print(f'Spectrogram Shape {X.shape}')
-            # print(f'Screen Geometry: {screen_geometry.width()} x {screen_geometry.height()}')
-            # print(f'Height: {screen_geometry.height()} \t NFFT: {NFFT}')
-            # print(f"computation took {timer() - start:{0}.{4}} seconds")
 
     def changePen(self):
         self.applyColor(self.view.color)
@@ -499,7 +504,7 @@ class TimeValue(Renderer):
 
     def reload(self):
         pass
-    
+
     def perRendererParameterProcessing(self, parameters):
         # TODO: look at parameters and modify things accordingly
         if 'y_min' in parameters or 'y_max' in parameters:
@@ -522,10 +527,10 @@ class TimeValue(Renderer):
 
 
 class Partition(Renderer):
-    accepts = None  # "abstract" rendering class
+    accepts = tracking.Partition
     vertical_placement = 0.1
     z_value = 100
-    
+
     def perRendererParameterProcessing(self, parameters):
         if 'y_min' in parameters or 'y_max' in parameters:
             self.setLimits()
@@ -779,7 +784,6 @@ class Partition(Renderer):
 
 
 class PartitionRO(Partition):
-    accepts = tracking.Partition
     name = 'Partition (read-only)'
 
     def createLines(self):
@@ -799,7 +803,6 @@ class PartitionRO(Partition):
 
 
 class PartitionEdit(Partition):
-    accepts = tracking.Partition
     name = 'Partition (editable)'
 
     def createLines(self):
@@ -864,24 +867,6 @@ class Event(Renderer):
         # TODO: look at parameters and modify things accordingly
         pass
 
-    def render(self) -> Tuple[pg.AxisItem, pg.ViewBox]:
+    def render(self, plot_area) -> Tuple[pg.AxisItem, pg.ViewBox]:
         raise NotImplementedError
         # TODO: implement me: adding, deleting, moving of events
-
-
-def main():
-    # example
-    print(get_renderer_classes())
-    track = tracking.Track.read(Path(__file__).parents[2].resolve() /
-                                '/dat/speech.wav')
-    print([o for o in get_renderer_classes(type(track))])
-    # build dictionary of per-track availability of renderers
-    available_renderers = {t.__name__:
-                           {r.name: r for r in get_renderer_classes(t)}
-                           for t in tracking.get_track_classes()}
-    print(available_renderers)
-    print(f"default wave renderer: {next(iter(available_renderers['Wave']))}")
-
-
-if __name__ == '__main__':
-    main()
