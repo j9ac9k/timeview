@@ -937,12 +937,12 @@ class TimeValue(Track):
             try:
                 if self is None:
                     self = cls.read_f0(name, fs)[0]
-            except:  # TODO: remove bare excepts
+            except FileNotFoundError:  # TODO: need more exceptions?
                 pass
             try:
                 if self is None:
                     self = cls.read_pitchtier(name, fs)
-            except:  # TODO: remove bare excepts
+            except FileNotFoundError:  # TODO: need more exceptions?
                 pass
             if self is None:
                 raise ValueError("file '{}' has unknown format".format(name))
@@ -1541,7 +1541,7 @@ class Partition(Track):
                (self._time == other._time).all() and \
                (self._value == other._value).all():
                 return True
-        except:  # TODO: remove bare excepts
+        except AttributeError:
             pass
         return False
 
@@ -1621,11 +1621,11 @@ class Partition(Track):
         else:
             try:
                 return cls.read_lab(name, fs)
-            except:  # TODO: remove bare excepts
+            except FileNotFoundError:  # TODO: need to catch more exceptions?
                 pass
             try:
                 return cls.read_textgrid(name, fs)
-            except:  # TODO: remove bare excepts
+            except FileNotFoundError:  # TODO: need to catch more exceptions?
                 pass
             raise ValueError("file '{}' has unknown format".format(name))
 
