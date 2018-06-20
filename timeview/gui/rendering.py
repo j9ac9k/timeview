@@ -677,6 +677,7 @@ class Partition(Renderer):
         self.vb.removeItem(label)
 
         if modify_track:
+            assert isinstance(self.track, tracking.Partition)
             self.track.delete_merge_left(index)
         self.calcPartitionNamePlacement(self.names[index - 1],
                                         index - 1,

@@ -154,6 +154,7 @@ class DumbPlot(pg.GraphicsView):
 
     @Slot(View, name='addView')
     def addView(self, view: View, forceRangeReset=None):
+        assert view.renderer is not None
         logging.debug(f'Adding {view.renderer.name}')
         if forceRangeReset is not None:
             rangeReset = forceRangeReset
@@ -225,6 +226,7 @@ class DumbPlot(pg.GraphicsView):
 
     @Slot(View, name='changeColor')
     def changeColor(self, view_object: View):
+        assert view_object.renderer is not None
         view_object.renderer.changePen()
 
     @Slot(name='Align Views')

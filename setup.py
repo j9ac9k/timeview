@@ -1,6 +1,6 @@
 from setuptools import setup
 
-requirements = ["intel-numpy",
+requirements = ["numpy",
                 "scipy",
                 "sqlalchemy",
                 "numba",
