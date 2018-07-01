@@ -1,28 +1,20 @@
 import unittest
 from pathlib import Path
 
-from ..dsp import tracking, processing
+from timeview.dsp import tracking, processing
 
 # see also: http://johnnado.com/pyqt-qtest-example/
 
 class TestProcessors(unittest.TestCase):
     def setUp(self):
-        wav_name = Path(__file__).parents[2] / 'dat/speech.wav'
+        wav_name = Path(__file__).parents[1] / 'example/speech-mwm.wav'
         self.wav = tracking.Track.read(wav_name)
-        par_name = Path(__file__).parents[2] / 'dat/speech.lab'
+        par_name = Path(__file__).parents[1] / 'example/speech-mwm.lab'
         self.par = tracking.Track.read(par_name)
 
     def test_PeakTracker(self):
         processor = processing.PeakTracker()
         processor.set_data({'wave': self.wav})
-        processor.process()
-
-    def test_RodentCallClassifier(self):
-        processor = processing.PeakTracker()
-        processor.set_data({'wave': self.wav})
-        peak, = processor.process()
-        processor = processing.RodentCallClassifier()
-        processor.set_data({'activity partition': self.par, 'peak track': peak})
         processor.process()
 
     def test_F0Analyzer(self):

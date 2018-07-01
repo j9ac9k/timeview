@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
 requirements = ["numpy",
                 "scipy",
@@ -17,7 +17,7 @@ test_requirements = ["pytest",
 
 setup(
     # meta-data
-    name='TimeView',
+    name='timeview',
     version='0.1.0',
     description="A GUI application to view and analyze time series signal data",
     author=["Ognyan Moore", "Alex Kain"],
@@ -39,11 +39,13 @@ setup(
               'timeview.dsp',
               'timeview.gui',
               'timeview.manager'],
+    # packages = find_packages(),
     include_package_data=True,
     # launching
     entry_points={
         'gui_scripts': [
-            'timeview = timeview.__main__'
+            'timeview-gui = timeview.__main__:main',
+            'timeview = timeview.__main__:main'
         ]
     },
     # dependencies
@@ -59,5 +61,5 @@ setup(
         'test': test_requirements
     },
     python_requires=">=3.6.0",
-    # setup_requires=["pytest-runner"],
+    setup_requires=["pytest-runner"],
 )

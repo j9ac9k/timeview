@@ -3,7 +3,6 @@
 """
 TimeView CLI and GUI Application
 """
-
 from pathlib import Path
 from argparse import Namespace, ArgumentParser
 
@@ -44,5 +43,5 @@ def main():
     args = parser.parse_args()
     args.func(args)
 
-
-main()
+if __name__ == "__main__":
+    main()
