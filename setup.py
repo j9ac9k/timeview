@@ -1,28 +1,65 @@
-from setuptools import setup, find_packages
+from pathlib import Path
+from setuptools import setup
 
-requirements = ["numpy",
-                "scipy",
-                "sqlalchemy",
-                "numba",
-                "pyqt5",
-                "qtpy",
-                "pyqtgraph",
-                "qtawesome",
-                "pyedflib"]
+# Package meta-data.
+NAME = 'timeview'
+DESCRIPTION = 'A GUI application to view and analyze time series signal data'
+URL = 'https://github.com/j9ac9k/timeview'
+AUTHOR = 'Ognyan Moore'
+AUTHOR_EMAIL = 'ognyan.moore@gmail.com'
+REQUIRES_PYTHON = '>=3.6.0'
+VERSION = None
 
-test_requirements = ["pytest",
-                     "pytest-qt",
-                     "pytest-runner"]
+REQUIRED = ["numpy",
+            "scipy",
+            "sqlalchemy",
+            "numba",
+            "pyqt5",
+            "qtpy",
+            "pyqtgraph",
+            "qtawesome",
+            "pyedflib"]
+
+TESTS_REQUIRE = ["pytest",
+                 "pytest-qt",
+                 "pytest-runner"]
+
+CODE_REQUIRE = ["numpydoc",
+                "flake8",
+                "flake8-mypy",
+                "pylint"]
+
+
+# here = os.path.abspath(os.path.dirname(__file__))
+here = Path.resolve(Path(__file__).parent)
+
+# Import the README and use it as the long-description.
+# Note: this will only work if 'README.md' is present in your MANIFEST.in file!
+try:
+    with open((here / 'README.md'), encoding='utf-8') as f:
+        long_description = '\n' + f.read()
+except FileNotFoundError:
+    long_description = DESCRIPTION
+
+# Load the package's __version__.py module as a dictionary.
+about = {}
+if not VERSION:
+    with open(here / NAME / '__version__.py') as f:
+        exec(f.read(), about)
+else:
+    about['__version__'] = VERSION
 
 
 setup(
     # meta-data
-    name='timeview',
-    version='0.1.0',
-    description="A GUI application to view and analyze time series signal data",
-    author=["Ognyan Moore", "Alex Kain"],
-    author_email=['ognyan.moore@gmail.com', 'lxkain@gmail.com'],
-    url='https://github.com/lxlain/timeview',
+    name=NAME,
+    version=about['__version__'],
+    description=DESCRIPTION,
+    long_description=long_description,
+    long_description_content_type='text/markdown',
+    author=AUTHOR,
+    author_email=AUTHOR_EMAIL,
+    url=URL,
     keywords='timeview gui pyqt signal spectrogram',
     classifiers=[
         'Development Status :: 3 - Alpha',
@@ -39,27 +76,19 @@ setup(
               'timeview.dsp',
               'timeview.gui',
               'timeview.manager'],
-    # packages = find_packages(),
     include_package_data=True,
-    # launching
     entry_points={
         'gui_scripts': [
             'timeview-gui = timeview.__main__:main',
             'timeview = timeview.__main__:main'
         ]
     },
-    # dependencies
-    install_requires=requirements,
-    tests_require=test_requirements,
+    install_requires=REQUIRED,
+    tests_require=TESTS_REQUIRE,
     extras_require={
-        'dev': [
-            "numpydoc",
-            "flake8",
-            "flake8-mypy",
-            "pylint"
-        ],
-        'test': test_requirements
+        'dev': CODE_REQUIRE,
+        'test': TESTS_REQUIRE
     },
-    python_requires=">=3.6.0",
+    python_requires=REQUIRES_PYTHON,
     setup_requires=["pytest-runner"],
 )

@@ -1,8 +1,6 @@
-import os
 import pytest
-
-
 from timeview.gui import TimeView
+
 
 def test_init(qtbot):
     timeview_app = TimeView()
@@ -10,4 +8,3 @@ def test_init(qtbot):
 
     qtbot.addWidget(timeview_app.viewer)
     assert len(timeview_app.viewer.model.panels) == 1
-    # raise NotImplementedError
