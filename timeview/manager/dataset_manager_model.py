@@ -30,7 +30,7 @@ class Mixin:
         return s
 
 
-class Dataset(Base, Mixin):
+class Dataset(Base, Mixin):  # type: ignore
     name = Column(String, unique=True, nullable=False)
     # parameter = Column(Float, nullable=False)
     # cascade configuration
@@ -38,7 +38,7 @@ class Dataset(Base, Mixin):
     columns = ['name']
 
 
-class File(Base, Mixin):
+class File(Base, Mixin):  # type: ignore
     path = Column(String, unique=False, nullable=False)  # a file can belong to more than one dataset
     dataset_id = Column(Integer, ForeignKey('dataset.id'))
     # many-to-one

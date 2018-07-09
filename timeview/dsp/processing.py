@@ -26,7 +26,7 @@ class ProcessError(Exception):
     pass
 
 
-class DefaultProgressTracker(object):
+class DefaultProgressTracker:
     def update(self, value: int):
         print(f"{value}%", end='...', flush=True)
 

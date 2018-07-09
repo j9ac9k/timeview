@@ -344,18 +344,6 @@ class Event(Track):
         return self
 
     @classmethod
-    def read_PointProcess(cls, name, fs=48000):
-        raise NotImplementedError
-        # from pysig import praat
-        # p = praat.PointProcessFromFile(name)
-        # time = [e.time for e in p.pointsP]
-        # time = numpy.round(numpy.array(time) * fs).astype(TIME_TYPE)
-        # if (numpy.diff(time) <= 0).any():
-        #     logger.error('events are too close (for fs=%i) in file: %s, merging events' % (fs, name))
-        #     time = numpy.unique(time)
-        # return Event(time, fs, int(time[-1] + 1))
-
-    @classmethod
     def read_pml(cls, name, fs=48000):
         with open(name, 'r') as f:
             lines = f.readlines()
@@ -585,7 +573,7 @@ class Wave(Track):
         assert isinstance(fs, int)
         if fs != self._fs:
             # do this here, because multirate loading an external lib is problematic for the iOS port
-            from pysig import multirate
+            # from pysig import multirate
             #  import fractions
             #  return type(self)(multirate.resample(self._value, fractions.Fraction(fs, self._fs)), fs)
             return type(self)(multirate.resample(self._value, self._fs, fs), fs)
@@ -713,91 +701,6 @@ class Wave(Track):
         time = numpy.round(numpy.interp(time, x, y)).astype(numpy.int)
         # index = int(time * self.fs)
         self._value = self._value[time]
-
-    def draw_waveform_mpl(self, **kwargs):
-        raise NotImplementedError
-        # from matplotlib import pyplot as pp
-        # if self.dtype == numpy.int16:
-        #     limit = 2 ** 15
-        # elif self.dtype == numpy.int32:
-        #     limit = 2 ** 31
-        # elif self.dtype == numpy.float32 or self.dtype == numpy.float64:
-        #     limit = 1.0
-        # else:
-        #     raise
-        # h = pp.plot(numpy.arange(self.duration) / self._fs, self._value / limit, **kwargs)
-        # pp.axis([0, (self.duration-1) / self._fs, -1, 1])
-        # #pp.yticks(numpy.arange(-1,1,0.2), numpy.arange(-1,1,0.2) * limit)
-        # pp.yticks([0], [0])
-        # pp.xlabel('time (s)')
-        # pp.ylabel('value')
-        # return h
-
-    def draw_waveform_pg(self, **kwargs):
-        import pyqtgraph as pg
-        if self.dtype == numpy.int16:
-            limit = 2 ** 15
-        elif self.dtype == numpy.int32:
-            limit = 2 ** 31
-        elif self.dtype == numpy.float32 or self.dtype == numpy.float64:
-            limit = 1.0
-        else:
-            raise
-        h = pg.PlotItem(x=numpy.arange(self.duration) / self._fs, y=self._value / limit, **kwargs)
-        h.setLabels(bottom='time (s)', left='value')
-        return h
-
-    draw_waveform = draw_waveform_mpl
-
-    # TODO: stand-alone implementation, please, perhaps not here
-    def specgram(self):
-        # f0 = 150  # average human fundamental frequency (Hz)
-        # t0 = self._fs / f0  # period length (samples)
-        # n = 2 ** int(numpy.ceil(numpy.log2(t0)))
-        # frm = speech.frame(self._value, n // 2, n)
-        # x = frm.value * windows.hanning(n)
-        # TODO: avoid matplotlib code, write yourself!
-        # from matplotlib import pyplot as pp
-        # noverlap=256+128+64
-        # Pxx, freqs, bins, im = pp.specgram(self.value, NFFT=512, Fs=self.fs, cmap=pp.cm.gist_heat)
-        # return Pxx, bins, freqs
-        raise NotImplementedError
-
-    def draw_spectrogram_pg(self, **kwargs):
-        H, _x, _y = self.specgram()
-        import pyqtgraph as pg
-        # from pyqtgraph import QtCore
-        # TODO Why 10 * ? for dB scale we need 20 *
-        H = 10 * numpy.log10(H)  # log-magnitude
-        imi = pg.ImageItem()
-        imi.setImage(-H.T, autoLevels=True)
-        # imi.setRect(QtCore.QRect(0, 0, 3., 11000)) # this has an integer bug in it, reported!
-        imi.scale(self.duration / self.fs / imi.width(),
-                  self.fs / 2 / imi.height())
-        imv = pg.ViewBox()
-        imv.addItem(imi)
-        imp = pg.PlotItem(viewBox=imv)
-        imp.setLabels(bottom='time (s)',
-                      left='frquency (Hz)')
-        return imp, imi
-
-    def draw_pg(self):
-        raise NotImplementedError
-
-    def play(self):
-        # from pysig.audio import audio
-        # TODO is simpleaudio going to be a dependency?
-        import simpleaudio as sa
-        audio = (self._value / max(abs(self._value)) * 32767).astype(numpy.int16)
-        obj = sa.play_buffer(audio, 1, 2, self._fs)
-        obj.wait_done()
-
-    @classmethod
-    def record(cls, channels, fs, duration):
-        from pysig.audio import audio
-        value = audio.record(numpy.int16, channels, fs, duration)
-        return Wave(value, fs)
-
 
 class TimeValue(Track):
     def __init__(self, time, value, fs, duration, path=None):
@@ -951,22 +854,6 @@ class TimeValue(Track):
         self.path = name
         return self
 
-    @classmethod
-    def read_pitchtier(cls, name, fs=48000):
-        import praat
-        p = praat.PointTierFromFile(name)
-        time = []
-        value = []
-        for point in p:
-            time.append(point.mark)
-            value.append(float(point.time))
-        time = numpy.round(numpy.array(time) * fs).astype(TIME_TYPE)
-        value = numpy.array(value)
-        d = numpy.diff(time)
-        index = numpy.where(d > 0)[0]
-        time = time[index]
-        value = value[index]
-        return TimeValue(time, value, fs, int(numpy.ceil(p.maxTime * fs)))
 
     @classmethod
     def read_f0(cls, name, frameRate=0.01, frameSize=0.0075, fs=48000):
@@ -1057,15 +944,6 @@ class TimeValue(Track):
             else:
                 for fb in self._value:
                     f.write(str(round(fb, 3)) + '\n')
-
-    def write_pitchtier(self, name):
-        """Write Praat pitch tier; it does not work."""
-        import praat
-        p = praat.PointTier(name, min(self.get_time()), max(self.get_time()))
-        for t, value in zip(self.get_time(), self.get_value()):
-            p.addPoint(value)
-        with open(name, 'w') as f:
-            p.write(f)  # this praat function seems to be faulty
 
     @classmethod
     def from_Partition(cls, p):
@@ -1214,35 +1092,6 @@ class TimeValue(Track):
     #     tv = type(self)(time=time, value=value, fs=self.fs, duration=b-a)
     #     assert type(self._value) == type(tv.value)
     #     return tv
-
-    def draw_mpl(self, **kwargs):
-        from matplotlib import pyplot
-        if len(kwargs) == 0:
-            kwargs = {'linestyle': "-"}
-        if isinstance(self._value.flat[0], numpy.number):
-            h = pyplot.plot(self._time / self._fs, self._value, **kwargs)
-        else:
-            h = pyplot.vlines(self._time / self._fs,
-                              numpy.zeros_like(self._time),
-                              numpy.ones_like(self._time),
-                              alpha=0.5)
-            for i in range(len(self._time)):
-                pyplot.text(self._time[i] / self._fs, 0.5,
-                            self._value[i],
-                            color='r',
-                            verticalalignment='baseline',
-                            horizontalalignment='center',
-                            alpha=0.5,
-                            rotation=-45)
-        pyplot.axis(xmin=0, xmax=self.duration / self._fs)
-        pyplot.xlabel('time (s)')
-        pyplot.ylabel('value')
-        return h
-
-    def draw_pg(self, **kwargs):
-        raise NotImplementedError
-
-    draw = draw_mpl
 
     def time_warp(self, X, Y):
         assert X[0] == 0
@@ -1435,19 +1284,6 @@ class Label(Track):
     def read(cls, *args, **kwargs):
         return cls.read_lbl(cls, *args, **kwargs)
 
-    def draw_pg(self,
-                y=.5,
-                rotation=-75,
-                fc=['b', 'g'],
-                ec='k',
-                span_alpha=0.05,
-                text_alpha=0.3,
-                ymin=0,
-                ymax=1,
-                color='k',
-                values=[]):
-        raise NotImplementedError
-
 
 class Partition(Track):
     default_suffix = '.lab'
@@ -1562,10 +1398,6 @@ class Partition(Track):
     def resample(self, fs):
         """resample to a certain fs"""
         if fs != self._fs:
-            # return type(self)(time = self._time.copy() * fs,
-            #                   value = self._value.copy(),
-            #                   fs=fs,
-            #                   duration=self._duration)
             factor = fs / self._fs
             time = numpy.round(factor * self._time).astype(TIME_TYPE)
             time[-1] = numpy.ceil(factor * self._time[-1])
@@ -1573,14 +1405,6 @@ class Partition(Track):
             return type(self)(time, self._value, fs)
         else:
             return self
-
-    # def select(self, a, b):
-    #     assert b > a
-    #     ai = self.time.searchsorted(a)
-    #     bi = self.time.searchsorted(b)
-    #     time = self._time[ai:bi] - a
-    #     value = self._value[ai:bi]
-    #     return type(self)(time, value, self.fs, b-a)
 
     def select(self, a, b):
         assert 0 <= a
@@ -1630,19 +1454,6 @@ class Partition(Track):
             raise ValueError("file '{}' has unknown format".format(name))
 
     @classmethod
-    def read_textgrid(cls, name, fs=48000, encoding="UTF-8"):
-        from pysig import praat
-        t = praat.TextGridFromFile(name)
-        time = [0]
-        value = []
-        for interval in t[0]:
-            time.append(interval.maxTime)
-            value.append(interval.mark.strip())
-        time = numpy.round(numpy.array(time) * fs).astype(TIME_TYPE)
-        # TODO: assert labels are not longer than 16 characters
-        return Partition(time, numpy.array(value, dtype='U16'), fs=fs)  # up to 16 characters (labels could be words)
-
-    @classmethod
     def read_lab(cls, name, fs=300_000, encoding='UTF8'):
         """load times, values from a label file"""
         with codecs.open(name, 'r', encoding=encoding) as f:
@@ -1662,14 +1473,6 @@ class Partition(Track):
             t2 = float(t2)
             if label[-1] == '\r':
                 label = label[:-1]
-            # try:
-            #    label = label_type(label)
-            # except ValueError:
-            #    if len(time) == 0:
-            #        label_type = str
-            #        label = label_type(label)
-            #    else:
-            #        raise
             if len(time) == 0:
                 time.append(t1)
             else:
@@ -1775,17 +1578,6 @@ class Partition(Track):
             f.write("%f 125 %s\n" % (self.fs, self._time[i + 1] / self.fs, v))
         f.close()
 
-    def write_textgrid(self, name):
-        from pysig import praat
-        it = praat.IntervalTier(name='1', minTime=0, maxTime=self.duration / self.fs)
-        # time = numpy.array([    0, 10392, 20856, 33974, 35981, 37162, 63134, 82589], dtype=numpy.int32)
-        # value = numpy.array([u'.pau', u'h', u'a\u028a', u'tc', u't', u's', u'.pau'], dtype='<U16')
-        for i, v in enumerate(self._value):
-            it.add(self._time[i] / self.fs, self._time[i+1] / self.fs, v)
-        tg = praat.TextGrid(maxTime=self.duration / self.fs)
-        tg.append(it)
-        tg.write(name)
-
     @classmethod
     def from_TimeValue(cls, tv):
         """convert a time value track with repeating values into a partition track"""
@@ -1840,19 +1632,6 @@ class Partition(Track):
         b = partition.select(length - length // 2, partition.duration)
         return a + b
 
-    # def __iadd__(self, other):
-    #     if self._fs != other._fs:
-    #         raise Exception("sampling frequencies must match")
-    #     self._time = numpy.concatenate((self._time, other._time[1:] + self._time[-1]))  # other._time[0] must be 0
-    #     if isinstance(self._value, numpy.ndarray):
-    #         self._value = numpy.hstack((self._value, other._value))
-    #     elif isinstance(self._value, list):
-    #         self._value += other._value # list concatenation
-    #     else:
-    #         raise Exception
-    #     #self._duration += other._duration # TODO: test me!
-    #     return self
-
     def get(self, t):
         """returns current label at time t"""
         # return self.value[numpy.where((self.time - t) <= 0)[0][-1]] # last one that is <= 0
@@ -1902,34 +1681,6 @@ class Partition(Track):
             time.append(self.duration)
             return Partition(numpy.array(time, dtype=TIME_TYPE), numpy.array(value), self.fs)
 
-    # def select_index(self, a, b):
-    #     """return indeces such that a <= time < b"""
-    #     return range(self._time.searchsorted(a), self._time.searchsorted(b))
-
-    # def select(self, a, b):
-    #     """copy a section, interval [)"""
-    #     index = self.select_index(a, b)
-    #     if len(index) == 0:
-    #         return type(self)(time=numpy.array([0, b-a],
-    #                           dtype=TIME_TYPE),
-    #                           value=numpy.array([self.get(a)]),
-    #                           fs=self.fs)
-    #     time = self._time[index] #.copy() - don't think that's needed here ...
-    #     value = self._value[index[0]:index[-1]] #.copy()
-    #     ## limit selection
-    #     #if a < self._time[0]:
-    #         #a = self.ti[0]
-    #     #if b > self.ti[-1]:
-    #         #b = self.ti[-1]
-    #     if a < self._time[index[0]]:  # prepend
-    #         time  = numpy.concatenate(([a], time))
-    #         value = numpy.concatenate(([self.get(a)], value))
-    #     if self.time[index[-1]] <= b:
-    #         time = numpy.concatenate((time, [b]))
-    #         value = numpy.concatenate((value, [self.get(b)]))
-    #     time -= time[0]
-    #     return type(self)(time=time, value=value, fs=self.fs)
-
     def time_warp(self, X, Y):
         assert X[0] == 0
         assert Y[0] == 0
@@ -1947,19 +1698,6 @@ class Partition(Track):
                 self.delete_merge_right(index[0])
             else:
                 break
-
-    def draw_pg(self,
-                y=.5,
-                rotation=-75,
-                fc=['b', 'g'],
-                ec='k',
-                span_alpha=0.05,
-                text_alpha=0.3,
-                ymin=0,
-                ymax=1,
-                color='k',
-                values=[]):
-        raise NotImplementedError
 
 
 class Value(Track):
@@ -2199,12 +1937,6 @@ class MultiTrack(dict):
         for track in iter(self.values()):
             track.time_warp(x, y)
 
-    def draw_pg(self, keys=None):
-        raise NotImplementedError
-
-    def draw_speech_pg(self):
-        raise NotImplementedError
-
     default_suffix = '.mtt'
 
     @classmethod
@@ -2294,300 +2026,282 @@ class HetMultiTrack(MultiTrack):  # may want to define common abstract class ins
         return obj
 
 
-class TestEvent(unittest.TestCase):
-    def setUp(self):
-        self.t = Event(numpy.array([3, 6], dtype=TIME_TYPE), 1, 10)
-        self.u = Event(numpy.array([0, 2], dtype=TIME_TYPE), 1, 3)
+# class TestEvent(unittest.TestCase):
+#     def setUp(self):
+#         self.t = Event(numpy.array([3, 6], dtype=TIME_TYPE), 1, 10)
+#         self.u = Event(numpy.array([0, 2], dtype=TIME_TYPE), 1, 3)
 
-    def test_init(self):
-        Event(numpy.array([], dtype=TIME_TYPE), 1, 0)  # empty
-        Event(numpy.array([], dtype=TIME_TYPE), 1, 10)  # empty
-        self.assertRaises(AssertionError, Event, numpy.array([6, 3], dtype=TIME_TYPE), 1, 10)  # bad times
-        self.assertRaises(Exception, Event, numpy.array([3, 6], dtype=TIME_TYPE), 1, 5)  # duration too short
+#     def test_init(self):
+#         Event(numpy.array([], dtype=TIME_TYPE), 1, 0)  # empty
+#         Event(numpy.array([], dtype=TIME_TYPE), 1, 10)  # empty
+#         self.assertRaises(AssertionError, Event, numpy.array([6, 3], dtype=TIME_TYPE), 1, 10)  # bad times
+#         self.assertRaises(Exception, Event, numpy.array([3, 6], dtype=TIME_TYPE), 1, 5)  # duration too short
 
-    def test_duration(self):
-        self.t.duration = 8  # ok
-        self.assertRaises(Exception, self.t.set_duration, 5)  # duration too short
+#     def test_duration(self):
+#         self.t.duration = 8  # ok
+#         self.assertRaises(Exception, self.t.set_duration, 5)  # duration too short
 
-    def test_eq(self):
-        self.assertTrue(self.t == self.t)
-        self.assertFalse(self.t == self.u)
+#     def test_eq(self):
+#         self.assertTrue(self.t == self.t)
+#         self.assertFalse(self.t == self.u)
 
-    def test_add(self):
-        v = self.t + self.u
-        self.assertTrue(v == Event(numpy.array([3, 6, 10, 12], dtype=TIME_TYPE), 1, 13))
-        self.t += self.u
-        self.assertTrue(self.t == Event(numpy.array([3, 6, 10, 12], dtype=TIME_TYPE), 1, 13))
+#     def test_add(self):
+#         v = self.t + self.u
+#         self.assertTrue(v == Event(numpy.array([3, 6, 10, 12], dtype=TIME_TYPE), 1, 13))
+#         self.t += self.u
+#         self.assertTrue(self.t == Event(numpy.array([3, 6, 10, 12], dtype=TIME_TYPE), 1, 13))
 
-    def test_select(self):
-        t = self.t.select(2, 7)
-        self.assertTrue(t == Event(numpy.array([1, 4], dtype=TIME_TYPE), 1, 5))
-        t = self.t.select(3, 7)
-        self.assertTrue(t == Event(numpy.array([0, 3], dtype=TIME_TYPE), 1, 4))
-        t = self.t.select(3, 6)
-        self.assertTrue(t == Event(numpy.array([0], dtype=TIME_TYPE), 1, 3))
-        t = self.t.select(2, 6)
-        self.assertTrue(t == Event(numpy.array([1], dtype=TIME_TYPE), 1, 4))
+#     def test_select(self):
+#         t = self.t.select(2, 7)
+#         self.assertTrue(t == Event(numpy.array([1, 4], dtype=TIME_TYPE), 1, 5))
+#         t = self.t.select(3, 7)
+#         self.assertTrue(t == Event(numpy.array([0, 3], dtype=TIME_TYPE), 1, 4))
+#         t = self.t.select(3, 6)
+#         self.assertTrue(t == Event(numpy.array([0], dtype=TIME_TYPE), 1, 3))
+#         t = self.t.select(2, 6)
+#         self.assertTrue(t == Event(numpy.array([1], dtype=TIME_TYPE), 1, 4))
 
-    def test_pml(self):
-        import tempfile
-        tmp = tempfile.NamedTemporaryFile(prefix='test_pml_')
-        filename = tmp.name
-        tmp.close()
-        self.t.pmlwrite(filename)
-        s = Event.pmlread(filename)
-        os.unlink(filename)
-        # duration CANNOT be encoded in the file (or can it?)
-        s.duration = int(numpy.round(self.t.duration * s.fs / self.t.fs))
-        s = s.resample(self.t.fs)
-        self.assertTrue(numpy.allclose(s.time, self.t.time))
+    # def test_pml(self):
+    #     import tempfile
+    #     tmp = tempfile.NamedTemporaryFile(prefix='test_pml_')
+    #     filename = tmp.name
+    #     tmp.close()
+    #     self.t.pmlwrite(filename)
+    #     s = Event.pmlread(filename)
+    #     os.unlink(filename)
+    #     # duration CANNOT be encoded in the file (or can it?)
+    #     s.duration = int(numpy.round(self.t.duration * s.fs / self.t.fs))
+    #     s = s.resample(self.t.fs)
+    #     self.assertTrue(numpy.allclose(s.time, self.t.time))
 
 
-class TestWave(unittest.TestCase):
-    def setUp(self):
-        self.w = Wave(numpy.arange(0, 16000), 16000)
-        self.v = Wave(numpy.arange(100, 200), 16000)
+# class TestWave(unittest.TestCase):
+#     def setUp(self):
+#         self.w = Wave(numpy.arange(0, 16000), 16000)
+#         self.v = Wave(numpy.arange(100, 200), 16000)
 
     # def test_init(self):
     #     t = Wave(numpy.array([], dtype=TIME_TYPE), 1)  # empty
 
-    def test_eq(self):
-        self.assertTrue(self.w == self.w)
-        self.assertFalse(self.w == self.v)
+#     def test_eq(self):
+#         self.assertTrue(self.w == self.w)
+#         self.assertFalse(self.w == self.v)
 
-    def test_add(self):
-        t = self.w + self.v
-        self.assertTrue(t.duration == 16100)
-        self.assertTrue(t.value[16050] == 150)
-        self.w += self.v
-        self.assertTrue(self.w.duration == 16100)
-        self.assertTrue(self.w.value[16050] == 150)
+#     def test_add(self):
+#         t = self.w + self.v
+#         self.assertTrue(t.duration == 16100)
+#         self.assertTrue(t.value[16050] == 150)
+#         self.w += self.v
+#         self.assertTrue(self.w.duration == 16100)
+#         self.assertTrue(self.w.value[16050] == 150)
 
-    def test_select(self):
-        w = self.w.select(10, 20)
-        self.assertTrue(w == Wave(numpy.arange(10, 20, dtype=TIME_TYPE), 16000))
-
-
-class TestTimeValue(unittest.TestCase):
-    def setUp(self):
-        self.t1 = TimeValue((numpy.linspace(1, 9, 3)).astype(TIME_TYPE), numpy.array([1, 4, 2]), 1, 10)
-        self.t2 = TimeValue((numpy.linspace(2, 8, 4)).astype(TIME_TYPE), numpy.array([1, 4, 8, 2]), 1, 10)
-        self.s1 = TimeValue(numpy.array([0, 1, 2], dtype=TIME_TYPE),
-                            numpy.array(['.pau', 'aI', '.pau'], dtype='S8'),
-                            1,
-                            3)
-        self.s2 = TimeValue(numpy.array([0, 1, 2], dtype=TIME_TYPE),
-                            numpy.array(['.pau', 'oU', '.pau'],
-                            dtype='S8'),
-                            1,
-                            3)
-        desc = numpy.dtype({"names": ['string', 'int'], "formats": ['S30', numpy.uint8]})  # record arrays
-        self.r1 = TimeValue(numpy.array([0, 1], dtype=TIME_TYPE),
-                            numpy.array([('abc', 3), ('def', 4)], dtype=desc),
-                            1,
-                            2)
-        self.f1 = TimeValue(numpy.array([0, 1], dtype=TIME_TYPE),
-                            numpy.array([numpy.arange(3), numpy.arange(4)], dtype=numpy.ndarray),
-                            1,
-                            2)
-
-    def test_init(self):
-        TimeValue(numpy.empty(0, dtype=TIME_TYPE), numpy.empty(0), 1, 0)  # empty
-        TimeValue(numpy.empty(0, dtype=TIME_TYPE), numpy.empty(0), 1, 10)  # empty
-        self.assertRaises(AssertionError,
-                          TimeValue,
-                          numpy.array([6, 3], dtype=TIME_TYPE),
-                          numpy.array([3, 6]), 1, 10)  # bad times
-        self.assertRaises(Exception,
-                          TimeValue,
-                          numpy.array([3, 6], dtype=TIME_TYPE),
-                          numpy.array([3, 6]), 1, 5)  # duration too short
-
-    def test_duration(self):
-        self.t1.duration = 11  # ok
-        self.assertRaises(Exception, self.t1.set_duration, 5)  # duration too short
-        self.s1.duration = 3  # ok
-        self.r1.duration = 3  # ok
-
-    def test_eq(self):
-        self.assertTrue(self.t1 == self.t1)
-        self.assertFalse(self.t1 == self.t2)
-
-    def test_add(self):
-        t = self.t1 + self.t2
-        self.assertTrue(t.duration == 20)
-        self.assertTrue(t.time[5] == 16)
-        self.assertTrue(t.value[5] == 8)
-        self.t1 += self.t2
-        t = self.t1
-        self.assertTrue(t.duration == 20)
-        self.assertTrue(t.time[5] == 16)
-        self.assertTrue(t.value[5] == 8)
-        self.s1 + self.s2
-        self.r1 + self.r1
-
-    def test_select(self):
-        t = self.t1.select(1, 5)
-        self.assertTrue(t == TimeValue(numpy.array([0], dtype=TIME_TYPE), numpy.array([1]), 1, 4))
-        t = self.t1.select(1, 6)
-        self.assertTrue(t == TimeValue(numpy.array([0, 4], dtype=TIME_TYPE), numpy.array([1, 4]), 1, 5))
-        t = self.t1.select(1, 6)
-        self.assertTrue(t == TimeValue(numpy.array([0, 4], dtype=TIME_TYPE), numpy.array([1, 4]), 1, 5))
-        t = self.t1.select(2, 5)
-        self.assertTrue(t == TimeValue(numpy.array([], dtype=TIME_TYPE), numpy.array([]), 1, 3))
+#     def test_select(self):
+#         w = self.w.select(10, 20)
+#         self.assertTrue(w == Wave(numpy.arange(10, 20, dtype=TIME_TYPE), 16000))
 
 
-class TestPartition(unittest.TestCase):
-    def setUp(self):
-        self.p1 = Partition(numpy.array([0, 5, 6, 10], dtype=TIME_TYPE), numpy.array(["start", "middle", "end"]), 1)
-        self.p2 = Partition(numpy.array([0, 5, 10], dtype=TIME_TYPE), numpy.array(["start2", "end2"]), 1)
+# class TestTimeValue(unittest.TestCase):
+#     def setUp(self):
+#         self.t1 = TimeValue((numpy.linspace(1, 9, 3)).astype(TIME_TYPE), numpy.array([1, 4, 2]), 1, 10)
+#         self.t2 = TimeValue((numpy.linspace(2, 8, 4)).astype(TIME_TYPE), numpy.array([1, 4, 8, 2]), 1, 10)
+#         self.s1 = TimeValue(numpy.array([0, 1, 2], dtype=TIME_TYPE),
+#                             numpy.array(['.pau', 'aI', '.pau'], dtype='S8'),
+#                             1,
+#                             3)
+#         self.s2 = TimeValue(numpy.array([0, 1, 2], dtype=TIME_TYPE),
+#                             numpy.array(['.pau', 'oU', '.pau'],
+#                             dtype='S8'),
+#                             1,
+#                             3)
+#         desc = numpy.dtype({"names": ['string', 'int'], "formats": ['S30', numpy.uint8]})  # record arrays
+#         self.r1 = TimeValue(numpy.array([0, 1], dtype=TIME_TYPE),
+#                             numpy.array([('abc', 3), ('def', 4)], dtype=desc),
+#                             1,
+#                             2)
+#         self.f1 = TimeValue(numpy.array([0, 1], dtype=TIME_TYPE),
+#                             numpy.array([numpy.arange(3), numpy.arange(4)], dtype=numpy.ndarray),
+#                             1,
+#                             2)
 
-    def NOtest_init(self):  # should one allow an empty partition?
-        Partition(numpy.array([0, 1], dtype=TIME_TYPE), numpy.zeros(1, dtype=TIME_TYPE), 1)
-        # p = Partition(numpy.empty(0, dtype=TIME_TYPE), numpy.empty(0, dtype=TIME_TYPE), 1)
+#     def test_init(self):
+#         TimeValue(numpy.empty(0, dtype=TIME_TYPE), numpy.empty(0), 1, 0)  # empty
+#         TimeValue(numpy.empty(0, dtype=TIME_TYPE), numpy.empty(0), 1, 10)  # empty
+#         self.assertRaises(AssertionError,
+#                           TimeValue,
+#                           numpy.array([6, 3], dtype=TIME_TYPE),
+#                           numpy.array([3, 6]), 1, 10)  # bad times
+#         self.assertRaises(Exception,
+#                           TimeValue,
+#                           numpy.array([3, 6], dtype=TIME_TYPE),
+#                           numpy.array([3, 6]), 1, 5)  # duration too short
 
-    def test_insert(self):
-        p = Partition(numpy.array([0, 5, 6, 10], dtype=TIME_TYPE), numpy.array(["start", "middle", "end"]), 1)
-        # p.insert(0, "even earlier")
-        # p.insert(1, "really the end")
-        p.insert(7, "still the middle")
-        self.assertTrue((p.time == numpy.array([0, 5, 6, 7, 10])).all())
+#     def test_duration(self):
+#         self.t1.duration = 11  # ok
+#         self.assertRaises(Exception, self.t1.set_duration, 5)  # duration too short
+#         self.s1.duration = 3  # ok
+#         self.r1.duration = 3  # ok
 
-    def test_duration(self):
-        self.p1.duration = 12  # ok
-        self.p1.duration = 8  # ok
-        self.assertRaises(Exception, self.p1.set_duration, 6)  # duration too short
+#     def test_eq(self):
+#         self.assertTrue(self.t1 == self.t1)
+#         self.assertFalse(self.t1 == self.t2)
 
-    def test_eq(self):
-        self.assertTrue(self.p1 == self.p1)
-        self.assertFalse(self.p1 == self.p2)
+#     def test_add(self):
+#         t = self.t1 + self.t2
+#         self.assertTrue(t.duration == 20)
+#         self.assertTrue(t.time[5] == 16)
+#         self.assertTrue(t.value[5] == 8)
+#         self.t1 += self.t2
+#         t = self.t1
+#         self.assertTrue(t.duration == 20)
+#         self.assertTrue(t.time[5] == 16)
+#         self.assertTrue(t.value[5] == 8)
+#         self.s1 + self.s2
+#         self.r1 + self.r1
 
-    def test_add(self):
-        p = self.p1 + self.p2
-        self.assertTrue(p.duration == 20)
-        self.assertTrue(p.time[4] == 15)
-        self.assertTrue(p.value[4] == "end2")
-        self.p1 += self.p2
-        p = self.p1
-        self.assertTrue(p.duration == 20)
-        self.assertTrue(p.time[4] == 15)
-        self.assertTrue(p.value[4] == "end2")
-
-    def test_select(self):
-        p = self.p1.select(5, 6)
-        self.assertTrue(p == Partition(numpy.array([0, 1], dtype=TIME_TYPE), numpy.array(['middle']), 1))
-        p = self.p1.select(5, 7)
-        self.assertTrue(p == Partition(numpy.array([0, 1, 2], dtype=TIME_TYPE), numpy.array(['middle', 'end']), 1))
-        p = self.p1.select(4, 6)
-        self.assertTrue(p == Partition(numpy.array([0, 1, 2], dtype=TIME_TYPE), numpy.array(['start', 'middle']), 1))
-        p = self.p1.select(4, 7)
-        self.assertTrue(p == Partition(numpy.array([0, 1, 2, 3], dtype=TIME_TYPE),
-                                       numpy.array(['start', 'middle', 'end']),
-                                       1))
-
-    def test_from_TimeValue(self):
-        tv = TimeValue(numpy.arange(9, dtype=TIME_TYPE) * 10 + 10,
-                       numpy.array([0.0, 1.0, 1.0, 4.0, 4.0, 4.0, 8.0, 8.0, 8.0]),
-                       1,
-                       100)
-        p = Partition.from_TimeValue(tv)
-        self.assertTrue((p.time == numpy.array([0, 15, 35, 65, 100])).all())
-        self.assertTrue((p.value == numpy.array([0.0, 1.0, 4.0, 8.0])).all())
-
-    def test_merge_same(self):
-        p = Partition(numpy.array([0, 3, 6, 10], dtype=TIME_TYPE), numpy.array(["1", "1", "2"]), 1)
-        p = p.merge_same()
-        self.assertTrue(p.value[1] == "2")
-
-
-class TestMultiTrack(unittest.TestCase):
-    def setUp(self):
-        self.e = Event(numpy.array([3, 6], dtype=TIME_TYPE), 1, 10)
-        self.w = Wave(numpy.arange(0, 10, dtype=numpy.int16), 1)
-        self.t = TimeValue((numpy.linspace(1, 9, 3)).astype(TIME_TYPE), numpy.array([1, 4, 2]), 1, 10)
-        self.p = Partition(numpy.array([0, 5, 6, 10], dtype=TIME_TYPE), numpy.array(["start", "middle", "end"]), 1)
-        self.m = MultiTrack({"e": self.e, "w": self.w, "t": self.t, "p": self.p})
-
-    def test_str(self):
-        str(self.m)
-
-    # def test_add(self):
-    #     answer = self.multiTrack1 + self.multiTrack2
-    #     self.assertTrue(self.mResult == answer)
-    #     answer = copy.copy(self.multiTrack1)
-    #     answer += self.multiTrack2
-    #     self.assertTrue(answer == self.mResult)
-
-    def test_resample(self):
-        m = self.m.resample(2)
-        self.assertTrue(m["e"].duration == m["w"].duration == m["t"].duration == m["p"].duration == 20)
-        self.assertTrue(m["e"].time[0] == 6)
-
-    # def test_select1(self):
-    #     ws = self.wave.select(0, self.wave.duration)
-    #     self.assertTrue(ws == self.wave)
-
-    # def test_select2(self):
-    #     tv = TimeValue(numpy.array([1, 5, 9]), numpy.array([1., 4., 2.]), 1, duration=10)
-    #     tv1 = tv.select(0, 2, interpolation="linear")
-    #     tv2 = tv.select(2, 10, interpolation="linear")
-    #     tvs = tv1 + tv2
-    #     v1 = tv.get(numpy.linspace(0., 10., 11), interpolation="linear").transpose()
-    #     v2 = tvs.get(numpy.linspace(0., 10., 11), interpolation="linear").transpose()
-    #     print v1
-    #     print v2
-    #     self.assertAlmostEqual( numpy.sum(numpy.abs(v1 - v2)), 0)
-
-    # def test_select3(self):
-    #     pt = Partition(fs=1, time=numpy.array([0., 6, 12, 18]), value=['.pau','h', 'E'], duration=18)
-    #     pt1 = pt.select(4.5, 12.5)
-    #     #print pt1
+#     def test_select(self):
+#         t = self.t1.select(1, 5)
+#         self.assertTrue(t == TimeValue(numpy.array([0], dtype=TIME_TYPE), numpy.array([1]), 1, 4))
+#         t = self.t1.select(1, 6)
+#         self.assertTrue(t == TimeValue(numpy.array([0, 4], dtype=TIME_TYPE), numpy.array([1, 4]), 1, 5))
+#         t = self.t1.select(1, 6)
+#         self.assertTrue(t == TimeValue(numpy.array([0, 4], dtype=TIME_TYPE), numpy.array([1, 4]), 1, 5))
+#         t = self.t1.select(2, 5)
+#         self.assertTrue(t == TimeValue(numpy.array([], dtype=TIME_TYPE), numpy.array([]), 1, 3))
 
 
-class TestCrossfade(unittest.TestCase):
-    def test_wave(self):
-        wav1 = Wave(numpy.array([1,  1,  1,  1,  1]), 1)
-        wav2 = Wave(numpy.array([10, 10, 10, 10, 10]), 1)
-        length = 3
-        wav = wav1.crossfade(wav2, length)
-        self.assertEqual(wav1.duration + wav2.duration - length, wav.duration)
-        self.assertTrue(numpy.allclose(wav.value, numpy.array([1, 1, 3, 5, 7, 10, 10])))
+# class TestPartition(unittest.TestCase):
+#     def setUp(self):
+#         self.p1 = Partition(numpy.array([0, 5, 6, 10], dtype=TIME_TYPE), numpy.array(["start", "middle", "end"]), 1)
+#         self.p2 = Partition(numpy.array([0, 5, 10], dtype=TIME_TYPE), numpy.array(["start2", "end2"]), 1)
 
-    def test_event(self):
-        evt1 = Event(numpy.array([1, 5, 9], dtype=TIME_TYPE), 1, 10)
-        evt2 = Event(numpy.array([2, 5, 9], dtype=TIME_TYPE), 1, 10)
-        length = 2
-        evt = evt1.crossfade(evt2, length)
-        self.assertEqual(evt1.duration + evt2.duration - length, evt.duration)
-        self.assertTrue(numpy.allclose(evt.time, numpy.array([1, 5, 10, 13, 17])))
+#     def NOtest_init(self):  # should one allow an empty partition?
+#         Partition(numpy.array([0, 1], dtype=TIME_TYPE), numpy.zeros(1, dtype=TIME_TYPE), 1)
+#         # p = Partition(numpy.empty(0, dtype=TIME_TYPE), numpy.empty(0, dtype=TIME_TYPE), 1)
 
-    def test_partition(self):
-        prt1 = Partition(numpy.array([0, 8, 10], dtype=TIME_TYPE), numpy.array(['1', '2']), 1)
-        prt2 = Partition(numpy.array([0, 2, 10], dtype=TIME_TYPE), numpy.array(['3', '4']), 1)
-        length = 4
-        prt = prt1.crossfade(prt2, length)
-        self.assertEqual(prt1.duration + prt2.duration - length, prt.duration)
-        self.assertTrue(numpy.allclose(prt.time, numpy.array([0, 8, 16])))
-        self.assertTrue((prt.value == numpy.array(['1', '4'])).all())
+#     def test_insert(self):
+#         p = Partition(numpy.array([0, 5, 6, 10], dtype=TIME_TYPE), numpy.array(["start", "middle", "end"]), 1)
+#         # p.insert(0, "even earlier")
+#         # p.insert(1, "really the end")
+#         p.insert(7, "still the middle")
+#         self.assertTrue((p.time == numpy.array([0, 5, 6, 7, 10])).all())
 
-    def test_timeValue(self):
-        pass  # TODO: implement me!
+#     def test_duration(self):
+#         self.p1.duration = 12  # ok
+#         self.p1.duration = 8  # ok
+#         self.assertRaises(Exception, self.p1.set_duration, 6)  # duration too short
+
+#     def test_eq(self):
+#         self.assertTrue(self.p1 == self.p1)
+#         self.assertFalse(self.p1 == self.p2)
+
+#     def test_add(self):
+#         p = self.p1 + self.p2
+#         self.assertTrue(p.duration == 20)
+#         self.assertTrue(p.time[4] == 15)
+#         self.assertTrue(p.value[4] == "end2")
+#         self.p1 += self.p2
+#         p = self.p1
+#         self.assertTrue(p.duration == 20)
+#         self.assertTrue(p.time[4] == 15)
+#         self.assertTrue(p.value[4] == "end2")
+
+#     def test_select(self):
+#         p = self.p1.select(5, 6)
+#         self.assertTrue(p == Partition(numpy.array([0, 1], dtype=TIME_TYPE), numpy.array(['middle']), 1))
+#         p = self.p1.select(5, 7)
+#         self.assertTrue(p == Partition(numpy.array([0, 1, 2], dtype=TIME_TYPE), numpy.array(['middle', 'end']), 1))
+#         p = self.p1.select(4, 6)
+#         self.assertTrue(p == Partition(numpy.array([0, 1, 2], dtype=TIME_TYPE), numpy.array(['start', 'middle']), 1))
+#         p = self.p1.select(4, 7)
+#         self.assertTrue(p == Partition(numpy.array([0, 1, 2, 3], dtype=TIME_TYPE),
+#                                        numpy.array(['start', 'middle', 'end']),
+#                                        1))
+
+#     def test_from_TimeValue(self):
+#         tv = TimeValue(numpy.arange(9, dtype=TIME_TYPE) * 10 + 10,
+#                        numpy.array([0.0, 1.0, 1.0, 4.0, 4.0, 4.0, 8.0, 8.0, 8.0]),
+#                        1,
+#                        100)
+#         p = Partition.from_TimeValue(tv)
+#         self.assertTrue((p.time == numpy.array([0, 15, 35, 65, 100])).all())
+#         self.assertTrue((p.value == numpy.array([0.0, 1.0, 4.0, 8.0])).all())
+
+#     def test_merge_same(self):
+#         p = Partition(numpy.array([0, 3, 6, 10], dtype=TIME_TYPE), numpy.array(["1", "1", "2"]), 1)
+#         p = p.merge_same()
+#         self.assertTrue(p.value[1] == "2")
 
 
-def example_wave_audio():
-    print('playing files')
-    Wave.wav_read('test-mono.wav').play()
-    Wave.wav_read('test-stereo.wav').play()
-    print('recording and then playing 3 seconds (mono)')
-    Wave.record(1, 22050, 3).play()
-    print('recording and then playing 3 seconds (stereo)')
-    Wave.record(2, 22050, 3).play()
+# class TestMultiTrack(unittest.TestCase):
+#     def setUp(self):
+#         self.e = Event(numpy.array([3, 6], dtype=TIME_TYPE), 1, 10)
+#         self.w = Wave(numpy.arange(0, 10, dtype=numpy.int16), 1)
+#         self.t = TimeValue((numpy.linspace(1, 9, 3)).astype(TIME_TYPE), numpy.array([1, 4, 2]), 1, 10)
+#         self.p = Partition(numpy.array([0, 5, 6, 10], dtype=TIME_TYPE), numpy.array(["start", "middle", "end"]), 1)
+#         self.m = MultiTrack({"e": self.e, "w": self.w, "t": self.t, "p": self.p})
 
-# if __name__ == "__main__":
-#     unittest.main()
-#     viewer()
-#     example_wave_draw()
-#     trk = Track.read('../../../dat/test-mwm.wav')
-#     trk = Track.read('../../../dat/test-mwm.lab')
-#     print(trk)
-#     print([t.__name__ for t in get_track_classes()])
+#     def test_str(self):
+#         str(self.m)
+
+#     # def test_add(self):
+#     #     answer = self.multiTrack1 + self.multiTrack2
+#     #     self.assertTrue(self.mResult == answer)
+#     #     answer = copy.copy(self.multiTrack1)
+#     #     answer += self.multiTrack2
+#     #     self.assertTrue(answer == self.mResult)
+
+#     def test_resample(self):
+#         m = self.m.resample(2)
+#         self.assertTrue(m["e"].duration == m["w"].duration == m["t"].duration == m["p"].duration == 20)
+#         self.assertTrue(m["e"].time[0] == 6)
+
+#     # def test_select1(self):
+#     #     ws = self.wave.select(0, self.wave.duration)
+#     #     self.assertTrue(ws == self.wave)
+
+#     # def test_select2(self):
+#     #     tv = TimeValue(numpy.array([1, 5, 9]), numpy.array([1., 4., 2.]), 1, duration=10)
+#     #     tv1 = tv.select(0, 2, interpolation="linear")
+#     #     tv2 = tv.select(2, 10, interpolation="linear")
+#     #     tvs = tv1 + tv2
+#     #     v1 = tv.get(numpy.linspace(0., 10., 11), interpolation="linear").transpose()
+#     #     v2 = tvs.get(numpy.linspace(0., 10., 11), interpolation="linear").transpose()
+#     #     print v1
+#     #     print v2
+#     #     self.assertAlmostEqual( numpy.sum(numpy.abs(v1 - v2)), 0)
+
+#     # def test_select3(self):
+#     #     pt = Partition(fs=1, time=numpy.array([0., 6, 12, 18]), value=['.pau','h', 'E'], duration=18)
+#     #     pt1 = pt.select(4.5, 12.5)
+#     #     #print pt1
+
+
+# class TestCrossfade(unittest.TestCase):
+#     def test_wave(self):
+#         wav1 = Wave(numpy.array([1,  1,  1,  1,  1]), 1)
+#         wav2 = Wave(numpy.array([10, 10, 10, 10, 10]), 1)
+#         length = 3
+#         wav = wav1.crossfade(wav2, length)
+#         self.assertEqual(wav1.duration + wav2.duration - length, wav.duration)
+#         self.assertTrue(numpy.allclose(wav.value, numpy.array([1, 1, 3, 5, 7, 10, 10])))
+
+#     def test_event(self):
+#         evt1 = Event(numpy.array([1, 5, 9], dtype=TIME_TYPE), 1, 10)
+#         evt2 = Event(numpy.array([2, 5, 9], dtype=TIME_TYPE), 1, 10)
+#         length = 2
+#         evt = evt1.crossfade(evt2, length)
+#         self.assertEqual(evt1.duration + evt2.duration - length, evt.duration)
+#         self.assertTrue(numpy.allclose(evt.time, numpy.array([1, 5, 10, 13, 17])))
+
+#     def test_partition(self):
+#         prt1 = Partition(numpy.array([0, 8, 10], dtype=TIME_TYPE), numpy.array(['1', '2']), 1)
+#         prt2 = Partition(numpy.array([0, 2, 10], dtype=TIME_TYPE), numpy.array(['3', '4']), 1)
+#         length = 4
+#         prt = prt1.crossfade(prt2, length)
+#         self.assertEqual(prt1.duration + prt2.duration - length, prt.duration)
+#         self.assertTrue(numpy.allclose(prt.time, numpy.array([0, 8, 16])))
+#         self.assertTrue((prt.value == numpy.array(['1', '4'])).all())
+
+#     def test_timeValue(self):
+#         pass  # TODO: implement me!
+

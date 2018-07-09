@@ -16,7 +16,7 @@ import numpy as np
 from PyQt5 import QtHelp
 from qtpy import QtGui, QtCore
 from qtpy.QtWidgets import QFileDialog, QMessageBox, QScrollArea, QWidget, QVBoxLayout, QMainWindow, QDesktopWidget,\
-    QAction, qApp, QFrame, QTabWidget, QSplitter, QDockWidget, QStyleFactory, QApplication
+    QAction, QFrame, QTabWidget, QSplitter, QDockWidget, QStyleFactory, QApplication, qApp
 from qtpy.QtCore import Slot, Signal, QDir
 import pyqtgraph as pg
 
@@ -968,7 +968,7 @@ class Viewer(QMainWindow):
             view.track = view.track.read(view.track.path)
             new_track = view.track.read(view.track.path)
             view.track = new_track
-        # TODO: change to render property that pulls the track from the view
+            # TODO: change to render property that pulls the track from the view
             view.renderer.track = new_track
             view.renderer.reload()
 

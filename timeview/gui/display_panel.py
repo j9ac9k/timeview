@@ -296,6 +296,7 @@ class DisplayPanel(QtWidgets.QWidget):
             -> QtWidgets.QWidget.eventFilter:
         if event.type() == QtCore.QEvent.FocusIn:
             self.select_me.emit(self.parent())
+            assert self.panel is not None
             self.panel.select_me()
         return QtWidgets.QWidget.eventFilter(self, source, event)
 
@@ -305,6 +306,7 @@ class DisplayPanel(QtWidgets.QWidget):
                             **kwargs):
         if 'renderer' in kwargs.keys():
             renderer_name = kwargs.pop('renderer')
+        assert self.panel is not None
         new_view = self.panel.new_view(track,
                                        renderer_name=renderer_name,
                                        **kwargs)

@@ -8,6 +8,7 @@ from math import ceil
 from qtpy import QtCore, QtGui, QtWidgets
 from qtpy.QtCore import Slot, Signal
 from timeview.gui.model import Panel, View
+from timeview.gui.rendering import Renderer
 
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
@@ -50,7 +51,7 @@ class ViewTable(QtWidgets.QTableWidget):
         super().__init__()
         self.display_panel = display_panel
         self.main_window = self.display_panel.main_window
-        self.panel: Panel = None
+        self.panel: Optional[Panel] = None
         self.columns = ('File',
                         'Type',
                         'Rendering',
@@ -111,9 +112,8 @@ class ViewTable(QtWidgets.QTableWidget):
             row = self.selectedIndexes()[0].row()
             return row
         elif self.rowCount() > 0:
-            logger.error('Rows exist but no row selected, \
-                         selecting last row as guess')
-            row = self.panel.views.index(self.panel.selected_view - 1)
+            logger.error('Rows exist but no row selected, selecting last row as guess')
+            row = self.panel.views.index(self.panel.selected_view) - 1
             self.selectRow(row)
             return row
         else:
@@ -213,9 +213,10 @@ class ViewTable(QtWidgets.QTableWidget):
 
     def _configureComboBox(self, view_object: View):
         render_combo_box = QtWidgets.QComboBox()
-        render_combo_box.addItems([str(renderer) for renderer
-                                   in view_object.track2renderers[
-                                   type(view_object.track).__name__].keys()])
+        render_combo_box.addItems([str(renderer) for renderer in view_object.track2renderers[
+                                   type(view_object.track).__name__
+                                   ].keys()])
+        assert isinstance(view_object.renderer, Renderer) 
         render_combo_box.setCurrentText(view_object.renderer.name)
         render_combo_box.activated['QString'].connect(self.changeRenderer)
         self.setCellWidget(self.panel.views.index(view_object),
