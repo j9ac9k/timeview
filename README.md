@@ -51,7 +51,7 @@ timeview
 TimeView supports installation via `pipenv`
 
 ```bash
-pipenv install timeview
+pipenv --python=3.6 install timeview
 ```
 
 To execute run
