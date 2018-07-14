@@ -30,7 +30,7 @@ install:
 build: off
 
 test_script:
-  -  "PYTHON%\\python.exe -m pytest -v tests/"
+  -  "PYTHON%\\python.exe -m pytest -v ."
 
 artifacts:
   - path: dist\*
