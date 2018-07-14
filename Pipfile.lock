@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "00c69f40b4c309f4584a2e7298d2f23fc5d6738797514e5c7de00e9f0b441182"
+            "sha256": "a53603c1f1d8dfb62f0a106b72d9f032c2b3c8def8726343cbd8becc7de38d1a"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -223,7 +223,8 @@
         },
         "timeview": {
             "editable": true,
-            "path": "."
+            "git": "https://github.com/j9ac9k/timeview.git",
+            "ref": "95b126c5f443c57ab04892e0cefc98362e61de84"
         }
     },
     "develop": {
@@ -497,7 +498,8 @@
         },
         "timeview": {
             "editable": true,
-            "path": "."
+            "git": "https://github.com/j9ac9k/timeview.git",
+            "ref": "95b126c5f443c57ab04892e0cefc98362e61de84"
         }
     }
 }

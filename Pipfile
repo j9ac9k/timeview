@@ -4,7 +4,7 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-timeview = {editable = true, path = "."}
+timeview = {editable = true, path = ".", git = "https://github.com/j9ac9k/timeview.git"}
 numba = ">=0.38.1"
 numpy = ">=1.14,<=1.15"
 pyqtgraph = ">=0.10.0"
