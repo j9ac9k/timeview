@@ -22,4 +22,4 @@ pytest-runner = ">=4.2"
 timeview = {editable = true, path = "."}
 
 [requires]
-python_version = "3.6.6"
+python_version = "3.6"
