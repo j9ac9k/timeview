@@ -1,0 +1,25 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+timeview = {path = ".", extras = ["test"]}
+numba = ">=0.38.1"
+numpy = ">=1.14,<=1.15"
+pyqtgraph = ">=0.10.0"
+pytest = ">=3.6.2"
+pytest-qt = ">=2.4.1"
+pytest-runner = ">=4.2"
+scipy = ">=1.1.0"
+pyEDFlib = ">=0.1.12"
+"PyQt5" = "<=5.12,>=5.10.1"
+QtAwesome = ">=0.4.4"
+QtPy = ">=1.4.2"
+SQLAlchemy = ">=1.2.9"
+pytest-xvfb = "*"
+
+[dev-packages]
+
+[requires]
+python_version = "3.6"
