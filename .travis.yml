@@ -1,15 +1,25 @@
 language: python
 
-os:
-  - linux
-  - osx
+env:
+  global:
+    - PYTHON_VERSION=3.6
+    - MAIN_CMD='python setup.py'
+    - SETUP_CMD='test -v'
+    - SETUP_XVFB=true
 
-sudo: false
+matrix:
+  include:
+    - os: linux
+      sudo: false
+    - os: osx
+      language: generic
 
-python:
-  - "3.6"
 
 install:
-  - pip install ".[test]"
+  - git clone --depth 1 git://github.com/astropy/ci-helpers.git
+  - source ci-helpers/travis/setup_conda.sh
 
-script: xvfb-run pytest
+script: 
+  # - xvfb-run pytest
+  - pip install ".[test]"
+  - $MAIN_CMD $SETUP_CMD
