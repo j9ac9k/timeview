@@ -1,5 +1,6 @@
 from pathlib import Path
 from setuptools import setup
+from typing import Dict
 
 # Package meta-data.
 NAME = 'timeview'
@@ -42,7 +43,7 @@ except FileNotFoundError:
     long_description = DESCRIPTION
 
 # Load the package's __version__.py module as a dictionary.
-about = {}
+about: Dict[str, str] = {}
 if not VERSION:
     with open(here / NAME / '__version__.py') as f:
         exec(f.read(), about)
