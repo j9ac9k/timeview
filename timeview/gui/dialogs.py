@@ -347,7 +347,7 @@ class ProcessorThread(QtCore.QThread):
     def __del__(self):
         self.wait()
 
-    def process(self) -> Tuple[Union[processing.Tracks]]:
+    def process(self) -> Tuple[Union[processing.Tracks], ...]:
         try:
             new_track_list =\
                 self.processor.process(progressTracker=self.progressTracker)

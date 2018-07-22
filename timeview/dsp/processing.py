@@ -38,7 +38,10 @@ class DefaultProgressTracker:
 
 class Processor(metaclass=ABCMeta):
     name = "Processor"
-    # acquire: ClassVar[Dict[str, Tracks]] = {}
+    # acquire = {'wave': tracking.Wave,
+    #            'active': tracking.Partition}
+    acquire = NamedTuple('acquire', [('wave', tracking.Wave), 
+                                     ('active', tracking.Partition)])
 
     def __init__(self):
         self.data = Data()
@@ -83,7 +86,7 @@ class Processor(metaclass=ABCMeta):
         # additional parameter checking can be performed here
 
     @abstractmethod
-    def process(self, progressTracker=None) -> Tuple[Tracks]: pass  
+    def process(self, progressTracker=None) -> Tuple[Tracks, ...]: pass  
 
     def del_data(self):
         self.data = {}
@@ -128,7 +131,8 @@ def get_processor_classes() -> Dict[str, Callable[..., Processor]]:
 
 class Filter(Processor):
     name = 'Linear Filter'
-    acquire = {'wave': tracking.Wave}
+    # acquire = {'wave': tracking.Wave}
+    acquire = NamedTuple('acquire', [('wave', tracking.Wave)])
 
     def __init__(self):
         super().__init__()
@@ -157,7 +161,8 @@ class Filter(Processor):
 
 class ZeroPhaseFilter(Filter):
     name = 'Zero-phase Linear Filter'
-    acquire = {'wave': tracking.Wave}
+    # acquire = {'wave': tracking.Wave}
+    acquire = NamedTuple('acquire', [('wave', tracking.Wave)])
 
     def process(self, progressTracker=None, **kwargs) -> Tuple[tracking.Wave]:
         # Processor.process(self, **kwargs)
@@ -179,7 +184,8 @@ class ZeroPhaseFilter(Filter):
 
 class EnergyEstimator(Processor):
     name = 'RMS-Energy (dB)'
-    acquire = {'wave': tracking.Wave}
+    # acquire = {'wave': tracking.Wave}
+    acquire = NamedTuple('acquire', [('wave', tracking.Wave)])
 
     def __init__(self):
         super().__init__()
@@ -217,7 +223,8 @@ class EnergyEstimator(Processor):
 
 class SpectralDiscontinuityEstimator(Processor):
     name = 'Spectral Discontinuity Estimator'
-    acquire = {'wave': tracking.Wave}
+    # acquire = {'wave': tracking.Wave}
+    acquire = NamedTuple('acquire', [('wave', tracking.Wave)])
 
     def __init__(self):
         super().__init__()
@@ -279,7 +286,8 @@ class SpectralDiscontinuityEstimator(Processor):
 
 class NoiseReducer(Processor):
     name = 'Noise Reducer'
-    acquire = {'wave': tracking.Wave}
+    # acquire = {'wave': tracking.Wave}
+    acquire = NamedTuple('acquire', [('wave', tracking.Wave)])
 
     def __init__(self):
         super().__init__()
@@ -303,7 +311,8 @@ class NoiseReducer(Processor):
 
 class ActivityDetector(Processor):
     name = 'Activity Detector'
-    acquire = {'wave': tracking.Wave}
+    # acquire = {'wave': tracking.Wave}
+    acquire = NamedTuple('acquire', [('wave', tracking.Wave)])
 
     def __init__(self):
         super().__init__()
@@ -351,8 +360,9 @@ class ActivityDetector(Processor):
 
 class F0Analyzer(Processor):
     name = 'F0 Analysis'
-    acquire = {'wave': tracking.Wave}
-
+    # acquire = {'wave': tracking.Wave}
+    acquire = NamedTuple('acquire', [('wave', tracking.Wave)])
+    
     def __init__(self):
         super().__init__()
         self.t0_min = 0
@@ -372,9 +382,9 @@ class F0Analyzer(Processor):
         assert self.parameters['frame_size'] >\
             (2 / self.parameters['f0_min']), 'frame_size must be > 2 / f0_min'
 
-    def process(self, progressTracker=None, **kwargs) -> Tuple[Union[tracking.TimeValue,
-                                                                     tracking.TimeValue,
-                                                                     tracking.Partition]]:
+    def process(self, progressTracker=None, **kwargs) -> Tuple[tracking.TimeValue,
+                                                               tracking.TimeValue,
+                                                               tracking.Partition]:
         # Processor.process(self, **kwargs)
         if progressTracker is not None:
             self.progressTracker = progressTracker
@@ -424,10 +434,9 @@ class F0Analyzer(Processor):
         f0.unit = 'Hz'
         f0.label = 'F0'
         dop = tracking.TimeValue(time, dop, wav.fs, wav.duration,
-                                 wav.path
-                                 .with_name(wav.path.stem + '-dop')
-                                 .with_suffix(
-                                     tracking.TimeValue.default_suffix))
+                                 wav.path.with_name(wav.path.stem + '-dop')
+                                         .with_suffix(
+                                            tracking.TimeValue.default_suffix))
         dop.min = 0
         dop.max = 1
         dop.label = 'degree of periodicity'
@@ -438,12 +447,17 @@ class F0Analyzer(Processor):
                                      tracking.TimeValue.default_suffix))
         vox = tracking.Partition.from_TimeValue(vox)
         vox.label = 'voicing'
+        assert isinstance(f0, tracking.TimeValue)
+        assert isinstance(dop, tracking.TimeValue)
+        assert isinstance(vox, tracking.Partition)
         return f0, dop, vox
 
 
 class PeakTracker(Processor):
     name = 'Peak Tracker'
-    acquire = {'wave': tracking.Wave}
+    acquire = NamedTuple('acquire', [('wave', tracking.Wave)])
+                                        #  'active': tracking.Partition])
+
 
     def __init__(self):
         super().__init__()
@@ -498,8 +512,8 @@ class PeakTracker(Processor):
 
 class PeakTrackerActiveOnly(PeakTracker):
     name = 'Peak Tracker (active regions only)'
-    acquire = {'wave': tracking.Wave,
-               'active': tracking.Partition}
+    acquire = NamedTuple('acquire', [('wave', tracking.Wave), 
+                                     ('active', tracking.Partition)])
 
     def process(self, progressTracker=None, **kwargs) -> Tuple[tracking.TimeValue]:        
         if progressTracker is not None:
