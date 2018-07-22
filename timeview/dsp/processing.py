@@ -1,6 +1,6 @@
 import logging
-from abc import ABCMeta
-from typing import Tuple, Dict, Union, Callable
+from abc import ABCMeta, abstractmethod
+from typing import Tuple, Dict, Union, Callable, NamedTuple, Optional, ClassVar
 
 import numpy as np
 from scipy import signal
@@ -12,6 +12,11 @@ from . import viterbi
 
 Tracks = Union[tracking.Wave, tracking.TimeValue, tracking.Partition]
 # type alias
+
+
+class Data(NamedTuple):
+    wave: Optional[tracking.Wave]
+    active: Optional[tracking.Partition]
 
 
 class InvalidDataError(Exception):
@@ -33,18 +38,28 @@ class DefaultProgressTracker:
 
 class Processor(metaclass=ABCMeta):
     name = "Processor"
-    acquire: Dict[str, object] = {}  # TODO: how to merge with data?
+    # acquire: ClassVar[Dict[str, Tracks]] = {}
 
     def __init__(self):
-        self.data: Dict[str, Tracks] = {}
-        self.parameters: Dict[str, Tracks] = {}  # default parameters
-        self.progressTracker = None
+        self.data = Data()
+        self.parameters: Dict[str, Any] = {}  # default parameters
+        self.progressTracker = DefaultProgressTracker()
 
     def set_data(self, data: Dict[str, Tracks]) -> None:
-        for key in self.acquire.keys():
-            if type(data[key]) != self.acquire[key]:  # check type
-                raise InvalidDataError
-        self.data = data
+        # for key, value in data.items():
+        #     if not isinstance(value, Data._field_types[key]):
+        #         raise InvalidDataError
+        
+        wav = data.get('wave')
+        if wav is not None and not isinstance(wav, tracking.Wave):
+            raise InvalidDataError
+        
+        active = data.get('active')
+        if active is not None and not isinstance(wav, tracking.Partition):
+            raise InvalidDataError
+        
+        self.data = Data(wave=wav,
+                         active=active)
 
     def get_parameters(self) -> Dict[str, str]:
         # default parameters can be modified here based on the data
@@ -67,16 +82,8 @@ class Processor(metaclass=ABCMeta):
             raise InvalidParameterError(e)
         # additional parameter checking can be performed here
 
-    def process(self, progressTracker=None):  # -> Tuple[Tracks]:
-        """
-        :param progressTracker: call process_tracker.updateProgress(int)
-        with an integer between 0-100 indicating how far process is
-        :return:
-        """
-        if progressTracker is None:
-            self.progressTracker = DefaultProgressTracker()
-        else:
-            self.progressTracker = progressTracker
+    @abstractmethod
+    def process(self, progressTracker=None) -> Tuple[Tracks]: pass  
 
     def del_data(self):
         self.data = {}
@@ -99,7 +106,7 @@ def get_processor_classes() -> Dict[str, Callable[..., Processor]]:
 #
 #     def process(self, **kwargs) -> Tuple[tracking.Wave]:
 #         Processor.process(self, **kwargs)
-#         wav = self.data['wave']
+#         wav = self.data.wave
 #         wav = wav.convert_dtype(np.float64)
 #         wav.path = wav.path.with_name(wav.path.stem + '-float64').with_suffix(
 #             tracking.Wave.default_suffix)
@@ -112,7 +119,7 @@ def get_processor_classes() -> Dict[str, Callable[..., Processor]]:
 #
 #     def process(self, **kwargs) -> Tuple[tracking.Wave]:
 #         Processor.process(self, **kwargs)
-#         wav = self.data['wave']
+#         wav = self.data.wave
 #         wav = wav.convert_dtype(np.int16)
 #         wav.path = wav.path.with_name(wav.path.stem + '-int16').with_suffix(
 #             tracking.Wave.default_suffix)
@@ -129,20 +136,22 @@ class Filter(Processor):
         self.parameters = {'B': np.array([1., -.95]),
                            'A': np.array([1.])}
 
-    def process(self, **kwargs) -> Tuple[tracking.Wave]:
-        Processor.process(self, **kwargs)
-        wav = self.data['wave']
+    def process(self, progressTracker=None, **kwargs) -> Tuple[tracking.Wave]:
+        # Processor.process(self, **kwargs)
+        if progressTracker is not None:
+            self.progressTracker = progressTracker
+        wav = self.data.wave
         x = wav.value
         self.progressTracker.update(10)
         y = signal.lfilter(self.parameters['B'],
-                           self.parameters['A'], x).astype(x.dtype)
+                          self.parameters['A'], x).astype(x.dtype)
         self.progressTracker.update(90)
         new_track = tracking.Wave(y,
                                   fs=wav.fs,
                                   path=wav.path
                                           .with_name(wav.path.stem + '-filtered')
                                           .with_suffix(tracking.Wave
-                                                               .default_suffix)),
+                                                              .default_suffix)),
         return new_track
 
 
@@ -150,9 +159,11 @@ class ZeroPhaseFilter(Filter):
     name = 'Zero-phase Linear Filter'
     acquire = {'wave': tracking.Wave}
 
-    def process(self, **kwargs) -> Tuple[tracking.Wave]:
-        Processor.process(self, **kwargs)
-        wav = self.data['wave']
+    def process(self, progressTracker=None, **kwargs) -> Tuple[tracking.Wave]:
+        # Processor.process(self, **kwargs)
+        if progressTracker is not None:
+            self.progressTracker = progressTracker
+        wav = self.data.wave
         x = wav.value
         self.progressTracker.update(10)
         y = signal.filtfilt(self.parameters['B'],
@@ -175,9 +186,12 @@ class EnergyEstimator(Processor):
         self.parameters = {'frame_size': 0.020,  # in seconds
                            'frame_rate': 0.010}  # in seconds
 
-    def process(self, **kwargs) -> Tuple[tracking.TimeValue]:
-        Processor.process(self, **kwargs)
-        wav = self.data['wave']
+    def process(self, progressTracker=None, **kwargs) -> Tuple[tracking.TimeValue]:
+        # Processor.process(self, **kwargs)
+        if progressTracker is not None:
+            self.progressTracker = progressTracker
+        wav = self.data.wave
+        assert isinstance(wav, tracking.Wave)
         wav = wav.convert_dtype(np.float64)
         self.progressTracker.update(10)
         frame = dsp.frame(wav,
@@ -212,10 +226,11 @@ class SpectralDiscontinuityEstimator(Processor):
                            'normalized': 1,
                            'delta_order': 1}
 
-    def process(self, **kwargs) -> Tuple[tracking.TimeValue]:
-        Processor.process(self, **kwargs)
-        # wav = self.data['wave']
-        wav: tracking.Wave = self.data['wave']
+    def process(self, progressTracker=None, **kwargs) -> Tuple[tracking.TimeValue]:
+        # Processor.process(self, **kwargs)
+        if progressTracker is not None:
+            self.progressTracker = progressTracker
+        wav = self.data.wave
         self.progressTracker.update(10)
         ftr, time, frequency = dsp.spectrogram(wav,
                                                self.parameters['frame_size'],
@@ -271,9 +286,11 @@ class NoiseReducer(Processor):
         self.parameters = {'silence_percentage': 10,
                            'frame_rate': 0.01}  # in seconds
 
-    def process(self, **kwargs) -> Tuple[tracking.Wave]:
-        Processor.process(self, **kwargs)
-        inp = self.data['wave']
+    def process(self, progressTracker=None, **kwargs) -> Tuple[tracking.Wave]:
+        # Processor.process(self, **kwargs)
+        if progressTracker is not None:
+            self.progressTracker = progressTracker
+        inp = self.data.wave
         inp = inp.convert_dtype(np.float64)
         self.progressTracker.update(20)
         # TODO: pull this up into here
@@ -295,9 +312,12 @@ class ActivityDetector(Processor):
                            'frame_size': 0.020,  # in seconds
                            'frame_rate': 0.01}
 
-    def process(self, **kwargs) -> Tuple[tracking.Partition, tracking.TimeValue]:
-        Processor.process(self, **kwargs)
-        wav = self.data['wave']
+    def process(self, progressTracker=None, **kwargs) -> Tuple[tracking.Partition,
+                                                               tracking.TimeValue]:
+        # Processor.process(self, **kwargs)
+        if progressTracker is not None:
+            self.progressTracker = progressTracker
+        wav = self.data.wave
         wav = wav.convert_dtype(np.float64)
         self.progressTracker.update(10)
         M, time, frequency = dsp.spectrogram(wav,
@@ -316,7 +336,7 @@ class ActivityDetector(Processor):
                                  wav.path.with_name(wav.path.stem + '-act')
                                  .with_suffix(
                                      tracking.TimeValue.default_suffix))
-        par = tracking.Partition.from_TimeValue(tmv)
+        par: tracking.Partition = tracking.Partition.from_TimeValue(tmv)
         par.value = np.char.mod('%d', par.value)
         emax = tracking.TimeValue(time, Emax, wav.fs, wav.duration,
                                   wav.path.with_name(wav.path.stem + '-emax')
@@ -352,11 +372,13 @@ class F0Analyzer(Processor):
         assert self.parameters['frame_size'] >\
             (2 / self.parameters['f0_min']), 'frame_size must be > 2 / f0_min'
 
-    def process(self, **kwargs) -> Tuple[tracking.TimeValue,
-                                         tracking.TimeValue,
-                                         tracking.Partition]:
-        Processor.process(self, **kwargs)
-        wav = self.data['wave']
+    def process(self, progressTracker=None, **kwargs) -> Tuple[Union[tracking.TimeValue,
+                                                                     tracking.TimeValue,
+                                                                     tracking.Partition]]:
+        # Processor.process(self, **kwargs)
+        if progressTracker is not None:
+            self.progressTracker = progressTracker
+        wav = self.data.wave
         wav = wav.convert_dtype(np.float64)
         self.progressTracker.update(10)
         R, time, frequency = dsp.correlogram(wav,
@@ -434,7 +456,7 @@ class PeakTracker(Processor):
 
     def get_parameters(self):
         if 'wave' in self.data:
-            self.parameters['freq_max'] = self.data['wave'].fs / 2
+            self.parameters['freq_max'] = self.data.wave.fs / 2
         return super().get_parameters()
 
     def set_parameters(self, parameter: Dict[str, str]):
@@ -442,10 +464,11 @@ class PeakTracker(Processor):
         if not self.parameters['freq_min'] < self.parameters['freq_max']:
             raise InvalidParameterError('freq_min must be < freq_max')
 
-    def process(self, **kwargs) -> Tuple[tracking.TimeValue]:
-        Processor.process(self, **kwargs)
-        # wav = self.data['wave']
-        wav: tracking.Wave = self.data['wave']
+    def process(self, progressTracker=None, **kwargs) -> Tuple[tracking.TimeValue]:
+        # Processor.process(self, **kwargs)
+        if progressTracker is not None:
+            self.progressTracker = progressTracker
+        wav = self.data.wave
         self.progressTracker.update(10)
         ftr, time, frequency = dsp.spectrogram(wav,
                                                self.parameters['frame_size'],
@@ -475,11 +498,14 @@ class PeakTracker(Processor):
 
 class PeakTrackerActiveOnly(PeakTracker):
     name = 'Peak Tracker (active regions only)'
-    acquire = {'wave': tracking.Wave, 'active': tracking.Partition}
+    acquire = {'wave': tracking.Wave,
+               'active': tracking.Partition}
 
-    def process(self, **kwargs) -> Tuple[tracking.TimeValue]:
+    def process(self, progressTracker=None, **kwargs) -> Tuple[tracking.TimeValue]:        
+        if progressTracker is not None:
+            self.progressTracker = progressTracker
         peak = super().process(**kwargs)[0]
-        active = self.data['active']
+        active = self.data.active
         for i in range(len(active.time) - 1):
             if active.value[i] in ['0', 0]:
                 a = np.searchsorted(peak.time / peak.fs, active.time[i] / active.fs)
