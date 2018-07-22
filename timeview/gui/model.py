@@ -11,16 +11,16 @@ class UnknownRendererError(Exception):
 
 
 class View:
-    track2renderers = {t.__name__: {r.name: r for r in rendering.get_renderer_classes(t)}
+    track2renderers = {type(t).__name__: {r.name: r for r in rendering.get_renderer_classes(t)}
                        for t in tracking.get_track_classes()}
 
     def __init__(self,
                  track: tracking.Track,
-                 attached_panel: 'Panel',
+                 attached_panel: Panel,
                  renderer_name: Optional[str] = None,
                  show: bool = True,
                  color: Tuple[int, int, int] = (255, 255, 255),
-                 **parameters) -> None:
+                 **parameters: str) -> None:
         self.track = track
         self.show = show
         self.panel = attached_panel
@@ -37,13 +37,13 @@ class View:
         return f"{id(self)} (with track: {id(self.track)} " \
                f"- {self.track.path} - {self.renderer})"
 
-    def set_color(self, color):
+    def set_color(self, color: Tuple[int, int, int]) -> None:
         self.color = color
 
-    def change_panel(self, panel):
+    def change_panel(self, panel: Panel) -> None:
         self.panel = panel
 
-    def change_renderer(self, renderer_name: str, **parameters):
+    def change_renderer(self, renderer_name: str, **parameters: str) -> None:
         # TODO: way way hackey, reconsider alternate method
         if isinstance(self.renderer, rendering.Spectrogram):
             self.renderer.prepareForDeletion()
@@ -55,16 +55,16 @@ class View:
             raise UnknownRendererError
         self.renderer.set_view(self, **parameters)
 
-    def is_selected(self):
+    def is_selected(self) -> bool:
         return self.panel.selected_view is self
 
-    def set_selected(self):
+    def set_selected(self) -> None:
         self.panel.set_selected_view(self)
 
 
 class Panel:
-    def __init__(self, model: 'Model') -> None:
-        self.views: List['View'] = []
+    def __init__(self, model: Model) -> None:
+        self.views: List[View] = []
         self._selected_view: Optional[View] = None
         self.model = model
 
@@ -77,7 +77,7 @@ class Panel:
                  show: bool=True,
                  color: Tuple[int, int, int]=(255, 255, 255),
                  pos: Optional[int]=None,
-                 **parameters) -> View:
+                 **parameters: str) -> View:
         if not pos:
             pos = len(self.views)
         self.views.insert(pos, View(track, self, renderer_name=renderer_name, show=show, color=color, **parameters))
@@ -87,8 +87,8 @@ class Panel:
 
     def remove_view(self, pos: int) -> View:
         view_to_remove = self.views.pop(pos)
-        if len(self.views) == 0:
-            self.selected_view = None
+        if not self.views:
+            self.selected_view = None  # type: ignore
         elif pos == len(self.views):
             self.selected_view = self.views[-1]
         else:
@@ -101,17 +101,18 @@ class Panel:
     def move_view(self, to_index: int, from_index: int) -> None:
         self.views.insert(to_index, self.remove_view(from_index))
 
-    def get_selected_view(self) -> View:
+    def get_selected_view(self) -> Optional[View]:
         return self._selected_view
 
-    def set_selected_view(self, selected_view: View) -> None:
+    def set_selected_view(self, selected_view: Optional[View]) -> None:
         if self.views:
             assert selected_view in self.views
         else:
             assert selected_view is None
         self._selected_view = selected_view
 
-    selected_view = property(get_selected_view, set_selected_view)
+    # have to tell mypy to ignore type, currently mypy only accepts read only properties
+    selected_view: Optional[View] = property(get_selected_view, set_selected_view)  # type: ignore
 
     def selected_track(self) -> tracking.Track:
         return self.selected_view.track
@@ -128,10 +129,10 @@ class Panel:
 
 
 class Model:
-    def __init__(self):
+    def __init__(self) -> None:
         self.panels: List[Panel] = []
         self.panel_synchronization = True
-        self.selected_panel: Panel = None
+        self.selected_panel: Optional[Panel] = None
 
     def __str__(self) -> str:
         s = ""
@@ -140,7 +141,7 @@ class Model:
                 s += f"panel: {panel}  view: {view}\n"
         return s
 
-    def set_selected_panel(self, panel):
+    def set_selected_panel(self, panel: Panel) -> None:
         assert panel in self.panels
         self.selected_panel = panel
 
@@ -149,7 +150,7 @@ class Model:
             pos = len(self.panels)
         self.panels.insert(pos, Panel(model=self))
         if len(self.panels) == 1:
-            self.selected_panel = self.panels[pos]
+            self.set_selected_panel(self.panels[pos])
         return self.panels[pos]
 
     def remove_panel(self, pos: int) -> Panel:
@@ -157,12 +158,12 @@ class Model:
         if len(self.panels) == 1:
             self.selected_panel = None
         elif pos < len(self.panels) - 2:
-            self.selected_panel = self.panels[pos + 1]
+            self.set_selected_panel(self.panels[pos + 1])
         elif pos == len(self.panels) - 1:
-            self.selected_panel = self.panels[pos - 1]
+            self.set_selected_panel(self.panels[pos - 1])
         return self.panels.pop(pos)
 
-    def move_panel(self, to_index: int, from_index: int):
+    def move_panel(self, to_index: int, from_index: int) -> None:
         self.panels.insert(to_index, self.remove_panel(from_index))
 
     def get_groups(self) -> DefaultDict[int, List[View]]:
@@ -178,7 +179,7 @@ class Model:
 
     def move_view_across_panel(self,
                                view: View,
-                               to_panel: Panel):
+                               to_panel: Panel) -> None:
 
         source_panel = self.get_source_panel(view)
         pos = source_panel.views.index(view)
@@ -188,7 +189,11 @@ class Model:
 
     @staticmethod
     def link_track_across_panel(view: View, to_panel: Panel) -> View:
-        renderer_name = view.renderer.name
+        renderer_name: Optional[str]
+        if view.renderer is not None:
+            renderer_name = view.renderer.name
+        else:
+            renderer_name = None
         new_view = to_panel.new_view(view.track,
                                      renderer_name,
                                      show=view.show,
@@ -196,22 +201,29 @@ class Model:
         return new_view
 
     @staticmethod
-    def copy_view_across_panel(view: View, to_panel: Panel):
+    def copy_view_across_panel(view: View, to_panel: Panel) -> None:
         color = view.color
         track = deepcopy(view.track)
         renderer = view.renderer
         show = view.show
+        renderer_name: Optional[str]
+        if renderer is not None:
+            renderer_name = renderer.name
+        else:
+            renderer_name = None
         to_panel.new_view(track,
-                          renderer.name,
+                          renderer_name,
                           show=show,
                           color=color)
 
-    def get_source_panel(self, view: View):
+    def get_source_panel(self, view: View) -> Panel:
         for panel in self.panels:
             if view in panel.views:
                 return panel
+        else:
+            raise IndexError
 
-    def move_view_within_panel(self, view: View, position: int):
+    def move_view_within_panel(self, view: View, position: int) -> None:
         panel = self.get_source_panel(view)
         panel.views.remove(view)
         panel.views.insert(position, view)

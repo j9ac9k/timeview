@@ -11,6 +11,7 @@ from qtpy.QtCore import Slot, Signal
 
 from timeview.dsp import tracking, dsp, processing
 from .plot_objects import InfiniteLinePlot
+from .model import View
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -101,7 +102,7 @@ class Renderer(metaclass=ABCMeta):  # MixIn
     def set_track(self, track):
         self.track = track
 
-    def set_view(self, view, **kwargs):
+    def set_view(self, view: 'View', **kwargs):
         self.view = view
         self.set_track(view.track)
         self.parameters['y_min'], self.parameters['y_max'] =\
@@ -422,7 +423,7 @@ class Spectrogram(Renderer):
         self.plot_area.main_vb.sigXRangeChanged.connect(self.generatePlotData)
         self.plot_area.main_vb.sigResized.connect(self.generatePlotData)
 
-    def prepareForDeletion(self):
+    def prepareForDeletion(self) -> None:
         self.plot_area.main_vb.sigXRangeChanged.disconnect(self.generatePlotData)
         self.plot_area.main_vb.sigResized.disconnect(self.generatePlotData)
 
