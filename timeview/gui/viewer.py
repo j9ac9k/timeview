@@ -456,7 +456,10 @@ class Viewer(QMainWindow):
                                                       renderer='Partition (editable)')
 
     def getSelectedDisplayPanel(self) -> DisplayPanel:
-        selected_index = self.model.panels.index(self.model.selected_panel)
+        if self.model.selected_panel is not None:
+            selected_index = self.model.panels.index(self.model.selected_panel)
+        else:
+            selected_index = 0
         return self.frames[selected_index].displayPanel
 
     selectedDisplayPanel = property(getSelectedDisplayPanel)
@@ -530,7 +533,9 @@ class Viewer(QMainWindow):
                         for frame in self.frames])
 
     def getSelectedPanel(self) -> Panel:
-        return self.model.selected_panel
+        selected_panel = self.model.selected_panel
+        assert selected_panel is not None
+        return selected_panel
 
     def setSelectedPanel(self, panel: Panel):
         self.model.set_selected_panel(panel)

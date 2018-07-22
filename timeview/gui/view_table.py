@@ -105,6 +105,7 @@ class ViewTable(QtWidgets.QTableWidget):
         if not self.selectedIndexes():
             logger.warning('Selected Indexes returned nothing')
             self.selectRow(0)
+        assert self.panel is not None
         return self.panel.selected_view
 
     def selectedRow(self) -> int:
@@ -113,6 +114,7 @@ class ViewTable(QtWidgets.QTableWidget):
             return row
         elif self.rowCount() > 0:
             logger.error('Rows exist but no row selected, selecting last row as guess')
+            assert self.panel is not None
             row = self.panel.views.index(self.panel.selected_view) - 1
             self.selectRow(row)
             return row
@@ -140,8 +142,11 @@ class ViewTable(QtWidgets.QTableWidget):
     def selectRow(self, row: int, bypass=False):
         if not bypass:
             super().selectRow(row)
+        assert self.panel is not None
         previous_selected_view = self.panel.selected_view
+
         new_selected_view = self.panel.views[row]
+        assert new_selected_view is not None
         self.panel.set_selected_view(new_selected_view)
         if new_selected_view is not previous_selected_view:
             self.newSelected.emit(new_selected_view)
@@ -179,6 +184,7 @@ class ViewTable(QtWidgets.QTableWidget):
             self.hidePlot.emit(self.selectedView())
 
     def _configureFileLabel(self, view_object: View):
+        assert self.panel is not None
         font = QtGui.QFont("Monospace")
         font.setStyleHint(font.TypeWriter, strategy=font.PreferDefault)
         font.setFixedPitch(True)
@@ -201,6 +207,7 @@ class ViewTable(QtWidgets.QTableWidget):
                            fileLabel)
 
     def _configureTrackItem(self, view_object: View):
+        assert self.panel is not None
         text = type(view_object.track).__name__
         trackLabel = QtWidgets.QLabel(text)
         trackLabel.setMargin(5)
@@ -212,6 +219,7 @@ class ViewTable(QtWidgets.QTableWidget):
                            trackLabel)
 
     def _configureComboBox(self, view_object: View):
+        assert self.panel is not None
         render_combo_box = QtWidgets.QComboBox()
         render_combo_box.addItems([str(renderer) for renderer in view_object.track2renderers[
                                    type(view_object.track).__name__
@@ -224,6 +232,7 @@ class ViewTable(QtWidgets.QTableWidget):
                            render_combo_box)
 
     def _configureShowBox(self, view_object: View):
+        assert self.panel is not None
         show_check_box = ShowCheckBox()
         show_check_box.checkbox.setChecked(view_object.show)
         show_check_box.checkbox.stateChanged.connect(self.toggleView)
@@ -232,6 +241,7 @@ class ViewTable(QtWidgets.QTableWidget):
                            show_check_box)
 
     def _configureColor(self, view_object: View):
+        assert self.panel is not None
         color_button = QtWidgets.QPushButton()
         row = self.panel.views.index(view_object)
         col = 4
@@ -265,6 +275,7 @@ class ViewTable(QtWidgets.QTableWidget):
         """
         if setColor:
             view_object.set_color(next(plot_colors))
+        assert self.panel is not None
         pos = self.panel.views.index(view_object)
         self.insertRow(pos)
         self._configureFileLabel(view_object)
