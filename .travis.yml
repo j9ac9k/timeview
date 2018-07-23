@@ -22,4 +22,5 @@ script:
   - python --version 
   - pip install numpy
   - pip install ".[test]"
+  - black . --check
   - $MAIN_CMD $SETUP_CMD
