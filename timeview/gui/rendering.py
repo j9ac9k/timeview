@@ -1,6 +1,6 @@
 import logging
 from abc import ABCMeta, abstractmethod
-from typing import List, Union, Tuple, Optional, Dict, Type, TypeVar
+from typing import List, Union, Tuple, Optional, Dict, Type, TypeVar, TYPE_CHECKING
 from math import floor, ceil
 # from timeit import default_timer as timer
 
@@ -11,11 +11,12 @@ from qtpy.QtCore import Slot, Signal
 
 from timeview.dsp import tracking, dsp, processing
 from .plot_objects import InfiniteLinePlot
-from .model import View
+
+if TYPE_CHECKING:
+    from .model import View
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
-
 
 class InvalidDataError(Exception):
     pass
@@ -78,7 +79,7 @@ class Renderer(metaclass=ABCMeta):  # MixIn
 
     def __init__(self, *args, **parameters):
         self.track: processing.Tracks = None
-        self.view: 'View' = None
+        self.view: Optional['timeView'] = None
         self.item: Union[pg.PlotItem,
                          pg.PlotCurveItem,
                          pg.ImageItem,
@@ -154,6 +155,7 @@ class Renderer(metaclass=ABCMeta):  # MixIn
         return {k: str(v) for k, v in self.parameters.items()}
 
     def strColor(self) -> str:
+        assert self.view is not None
         q_color = QtGui.QColor.fromRgb(self.view.color[0],
                                        self.view.color[1],
                                        self.view.color[2])
@@ -240,18 +242,6 @@ class Renderer(metaclass=ABCMeta):  # MixIn
 
 
 BaseRenderer = TypeVar('BaseRenderer', bound=Renderer)
-
-
-def get_renderer_classes(accepts: Optional[tracking.Track] = None) -> List[Type[Renderer]]:
-
-    def all_subclasses(c) -> List[Type[Renderer]]:
-        return c.__subclasses__() + [a for b in c.__subclasses__() for a in all_subclasses(b)]
-
-    if accepts is None:
-        return [obj for obj in all_subclasses(Renderer) if obj.accepts is not None]
-    else:
-        return [obj for obj in all_subclasses(Renderer) if obj.accepts == accepts]
-
 
 # first renderer will be the default for that track type
 # | | |
@@ -600,6 +590,7 @@ class Partition(Renderer):
         self.vb.sigXRangeChanged.connect(self.refreshBounds)
 
     def genName(self, value) -> pg.TextItem:
+        assert self.view is not None
         name = pg.TextItem(str(value),
                            anchor=(0.5, self.vertical_placement),
                            color=self.view.color,
@@ -872,3 +863,13 @@ class Event(Renderer):
     def render(self, plot_area) -> Tuple[pg.AxisItem, pg.ViewBox]:
         raise NotImplementedError
         # TODO: implement me: adding, deleting, moving of events
+
+def get_renderer_classes(accepts: Optional[tracking.Track] = None) -> List[Type[Renderer]]:
+
+    def all_subclasses(c) -> List[Type[Renderer]]:
+        return c.__subclasses__() + [a for b in c.__subclasses__() for a in all_subclasses(b)]
+
+    if accepts is None:
+        return [obj for obj in all_subclasses(Renderer) if obj.accepts is not None]
+    else:
+        return [obj for obj in all_subclasses(Renderer) if obj.accepts == accepts]

@@ -2,8 +2,11 @@ from collections import defaultdict
 from typing import List, Optional, Tuple, DefaultDict
 from copy import deepcopy
 
-from . import rendering
-from ..dsp import tracking
+from timeview.gui import rendering
+from timeview.dsp import tracking
+
+# from . import rendering
+# from ..dsp import tracking
 
 
 class UnknownRendererError(Exception):
@@ -16,7 +19,7 @@ class View:
 
     def __init__(self,
                  track: tracking.Track,
-                 attached_panel: Panel,
+                 attached_panel: 'Panel',
                  renderer_name: Optional[str] = None,
                  show: bool = True,
                  color: Tuple[int, int, int] = (255, 255, 255),
@@ -40,7 +43,7 @@ class View:
     def set_color(self, color: Tuple[int, int, int]) -> None:
         self.color = color
 
-    def change_panel(self, panel: Panel) -> None:
+    def change_panel(self, panel: 'Panel') -> None:
         self.panel = panel
 
     def change_renderer(self, renderer_name: str, **parameters: str) -> None:
@@ -63,7 +66,7 @@ class View:
 
 
 class Panel:
-    def __init__(self, model: Model) -> None:
+    def __init__(self, model: 'Model') -> None:
         self.views: List[View] = []
         self._selected_view: Optional[View] = None
         self.model = model

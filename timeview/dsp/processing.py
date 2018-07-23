@@ -38,13 +38,11 @@ class DefaultProgressTracker:
 
 class Processor(metaclass=ABCMeta):
     name = "Processor"
-    # acquire = {'wave': tracking.Wave,
-    #            'active': tracking.Partition}
     acquire = NamedTuple('acquire', [('wave', tracking.Wave), 
                                      ('active', tracking.Partition)])
 
     def __init__(self):
-        self.data = Data()
+        self.data = Data(wave= None, active=None)
         self.parameters: Dict[str, Any] = {}  # default parameters
         self.progressTracker = DefaultProgressTracker()
 
@@ -89,7 +87,7 @@ class Processor(metaclass=ABCMeta):
     def process(self, progressTracker=None) -> Tuple[Tracks, ...]: pass  
 
     def del_data(self):
-        self.data = {}
+        self.data = Data(wave= None, active=None)
 
 
 def get_processor_classes() -> Dict[str, Callable[..., Processor]]:
@@ -161,7 +159,6 @@ class Filter(Processor):
 
 class ZeroPhaseFilter(Filter):
     name = 'Zero-phase Linear Filter'
-    # acquire = {'wave': tracking.Wave}
     acquire = NamedTuple('acquire', [('wave', tracking.Wave)])
 
     def process(self, progressTracker=None, **kwargs) -> Tuple[tracking.Wave]:
@@ -184,7 +181,6 @@ class ZeroPhaseFilter(Filter):
 
 class EnergyEstimator(Processor):
     name = 'RMS-Energy (dB)'
-    # acquire = {'wave': tracking.Wave}
     acquire = NamedTuple('acquire', [('wave', tracking.Wave)])
 
     def __init__(self):
@@ -223,7 +219,6 @@ class EnergyEstimator(Processor):
 
 class SpectralDiscontinuityEstimator(Processor):
     name = 'Spectral Discontinuity Estimator'
-    # acquire = {'wave': tracking.Wave}
     acquire = NamedTuple('acquire', [('wave', tracking.Wave)])
 
     def __init__(self):
@@ -234,7 +229,6 @@ class SpectralDiscontinuityEstimator(Processor):
                            'delta_order': 1}
 
     def process(self, progressTracker=None, **kwargs) -> Tuple[tracking.TimeValue]:
-        # Processor.process(self, **kwargs)
         if progressTracker is not None:
             self.progressTracker = progressTracker
         wav = self.data.wave
@@ -286,7 +280,6 @@ class SpectralDiscontinuityEstimator(Processor):
 
 class NoiseReducer(Processor):
     name = 'Noise Reducer'
-    # acquire = {'wave': tracking.Wave}
     acquire = NamedTuple('acquire', [('wave', tracking.Wave)])
 
     def __init__(self):
@@ -311,7 +304,6 @@ class NoiseReducer(Processor):
 
 class ActivityDetector(Processor):
     name = 'Activity Detector'
-    # acquire = {'wave': tracking.Wave}
     acquire = NamedTuple('acquire', [('wave', tracking.Wave)])
 
     def __init__(self):
@@ -323,7 +315,6 @@ class ActivityDetector(Processor):
 
     def process(self, progressTracker=None, **kwargs) -> Tuple[tracking.Partition,
                                                                tracking.TimeValue]:
-        # Processor.process(self, **kwargs)
         if progressTracker is not None:
             self.progressTracker = progressTracker
         wav = self.data.wave
@@ -360,7 +351,6 @@ class ActivityDetector(Processor):
 
 class F0Analyzer(Processor):
     name = 'F0 Analysis'
-    # acquire = {'wave': tracking.Wave}
     acquire = NamedTuple('acquire', [('wave', tracking.Wave)])
     
     def __init__(self):
@@ -385,7 +375,6 @@ class F0Analyzer(Processor):
     def process(self, progressTracker=None, **kwargs) -> Tuple[tracking.TimeValue,
                                                                tracking.TimeValue,
                                                                tracking.Partition]:
-        # Processor.process(self, **kwargs)
         if progressTracker is not None:
             self.progressTracker = progressTracker
         wav = self.data.wave
@@ -479,7 +468,6 @@ class PeakTracker(Processor):
             raise InvalidParameterError('freq_min must be < freq_max')
 
     def process(self, progressTracker=None, **kwargs) -> Tuple[tracking.TimeValue]:
-        # Processor.process(self, **kwargs)
         if progressTracker is not None:
             self.progressTracker = progressTracker
         wav = self.data.wave
