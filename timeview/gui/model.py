@@ -11,37 +11,42 @@ class UnknownRendererError(Exception):
 
 
 class View:
-    track2renderers = {t.__name__:  # type: ignore  # noqa: T400
-                       {r.name: r for r in rendering.get_renderer_classes(t)}
-                       for t in tracking.get_track_classes()}
+    track2renderers = {
+        t.__name__: {  # type: ignore  # noqa: T400
+            r.name: r for r in rendering.get_renderer_classes(t)
+        }
+        for t in tracking.get_track_classes()
+    }
 
-    def __init__(self,
-                 track: tracking.Track,
-                 attached_panel: 'Panel',
-                 renderer_name: Optional[str] = None,
-                 show: bool = True,
-                 color: Tuple[int, int, int] = (255, 255, 255),
-                 **parameters: str) -> None:
+    def __init__(
+        self,
+        track: tracking.Track,
+        attached_panel: "Panel",
+        renderer_name: Optional[str] = None,
+        show: bool = True,
+        color: Tuple[int, int, int] = (255, 255, 255),
+        **parameters: str,
+    ) -> None:
         self.track = track
         self.show = show
         self.panel = attached_panel
         self.renderer: Optional[rendering.Renderer] = None
         self.y_bounds = (0, 1)
-        self.change_renderer(renderer_name if renderer_name is not None
-                             else next(
-                                 iter(self.track2renderers[type(self.track).__name__])
-                                 ),
-                             **parameters)
+        self.change_renderer(
+            renderer_name
+            if renderer_name is not None
+            else next(iter(self.track2renderers[type(self.track).__name__])),
+            **parameters,
+        )
         self.color = color
 
     def __str__(self) -> str:
-        return f"{id(self)} (with track: {id(self.track)} " \
-               f"- {self.track.path} - {self.renderer})"
+        return f"{id(self)} (with track: {id(self.track)} " f"- {self.track.path} - {self.renderer})"
 
     def set_color(self, color: Tuple[int, int, int]) -> None:
         self.color = color
 
-    def change_panel(self, panel: 'Panel') -> None:
+    def change_panel(self, panel: "Panel") -> None:
         self.panel = panel
 
     def change_renderer(self, renderer_name: str, **parameters: str) -> None:
@@ -49,9 +54,9 @@ class View:
         if isinstance(self.renderer, rendering.Spectrogram):
             self.renderer.prepareForDeletion()
         try:
-            self.renderer =\
-                self.track2renderers[
-                    type(self.track).__name__][renderer_name](**parameters)
+            self.renderer = self.track2renderers[type(self.track).__name__][
+                renderer_name
+            ](**parameters)
         except KeyError:
             raise UnknownRendererError
         self.renderer.set_view(self, **parameters)
@@ -64,7 +69,7 @@ class View:
 
 
 class Panel:
-    def __init__(self, model: 'Model') -> None:
+    def __init__(self, model: "Model") -> None:
         self.views: List[View] = []
         self._selected_view: Optional[View] = None
         self.model = model
@@ -72,22 +77,28 @@ class Panel:
     def __str__(self) -> str:
         return str(id(self))
 
-    def new_view(self,
-                 track: tracking.Track,
-                 renderer_name: Optional[str]=None,
-                 show: bool=True,
-                 color: Tuple[int, int, int]=(255, 255, 255),
-                 pos: Optional[int]=None,
-                 **parameters: str) -> View:
+    def new_view(
+        self,
+        track: tracking.Track,
+        renderer_name: Optional[str] = None,
+        show: bool = True,
+        color: Tuple[int, int, int] = (255, 255, 255),
+        pos: Optional[int] = None,
+        **parameters: str,
+    ) -> View:
         if not pos:
             pos = len(self.views)
-        self.views.insert(pos,
-                          View(track,
-                               self,
-                               renderer_name=renderer_name,
-                               show=show,
-                               color=color,
-                               **parameters))
+        self.views.insert(
+            pos,
+            View(
+                track,
+                self,
+                renderer_name=renderer_name,
+                show=show,
+                color=color,
+                **parameters,
+            ),
+        )
         if pos == 0:
             self.selected_view = self.views[pos]
         return self.views[pos]
@@ -119,7 +130,9 @@ class Panel:
         self._selected_view = selected_view
 
     # have to tell mypy to ignore type, currently mypy only accepts read only properties
-    selected_view: Optional[View] = property(get_selected_view, set_selected_view)  # type: ignore
+    selected_view: Optional[View] = property(  # type: ignore
+        get_selected_view, set_selected_view
+    )
 
     def selected_track(self) -> tracking.Track:
         return self.selected_view.track
@@ -131,8 +144,7 @@ class Panel:
         self.model.set_selected_panel(self)
 
     def get_max_duration(self) -> int:
-        return max([view.track.duration / view.track.fs
-                    for view in self.views])
+        return max([view.track.duration / view.track.fs for view in self.views])
 
 
 class Model:
@@ -184,9 +196,7 @@ class Model:
         # includes the passed argument view
         return self.get_groups()[id(view.track)]
 
-    def move_view_across_panel(self,
-                               view: View,
-                               to_panel: Panel) -> None:
+    def move_view_across_panel(self, view: View, to_panel: Panel) -> None:
 
         source_panel = self.get_source_panel(view)
         pos = source_panel.views.index(view)
@@ -201,10 +211,9 @@ class Model:
             renderer_name = view.renderer.name
         else:
             renderer_name = None
-        new_view = to_panel.new_view(view.track,
-                                     renderer_name,
-                                     show=view.show,
-                                     color=view.color)
+        new_view = to_panel.new_view(
+            view.track, renderer_name, show=view.show, color=view.color
+        )
         return new_view
 
     @staticmethod
@@ -218,10 +227,7 @@ class Model:
             renderer_name = renderer.name
         else:
             renderer_name = None
-        to_panel.new_view(track,
-                          renderer_name,
-                          show=show,
-                          color=color)
+        to_panel.new_view(track, renderer_name, show=show, color=color)
 
     def get_source_panel(self, view: View) -> Panel:
         for panel in self.panels:

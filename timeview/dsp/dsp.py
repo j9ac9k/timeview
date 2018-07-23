@@ -73,14 +73,14 @@ def segment(x, nsize, nrate):
     X = np.empty((F, nsize), dtype=x.dtype)
     a = 0
     for f in range(F):
-        X[f, :] = x[a:a + nsize]
+        X[f, :] = x[a : a + nsize]
         a += nrate
     return X
 
 
-def frame(wav: tracking.Wave,
-          frame_size: float,
-          frame_rate: float) -> tracking.TimeValue:
+def frame(
+    wav: tracking.Wave, frame_size: float, frame_rate: float
+) -> tracking.TimeValue:
     """
     Given a waveform, return a timeValue track with each frame as the value and times of the center of each frame.
     times point to the center of the frame.
@@ -99,8 +99,13 @@ def frame(wav: tracking.Wave,
     value = segment(wav.value, nsize, nrate)
     # print(f"frame took time: {time.time() - tic}")
     assert value.shape[1] == nsize
-    time = np.array(np.arange(value.shape[0]) * nrate, dtype=tracking.TIME_TYPE) + nsize // 2
-    return tracking.TimeValue(time, value, wav.fs, wav.duration, path=wav.path)  # adjust path name here?
+    time = (
+        np.array(np.arange(value.shape[0]) * nrate, dtype=tracking.TIME_TYPE)
+        + nsize // 2
+    )
+    return tracking.TimeValue(
+        time, value, wav.fs, wav.duration, path=wav.path
+    )  # adjust path name here?
 
 
 # @numba.jit(nopython=True, cache=True)  # we need polymorphism here
@@ -129,8 +134,9 @@ def frame_centered(signal: np.ndarray, time: np.ndarray, frame_size: int) -> np.
             else:
                 right_avail = right_frame_size
             if 0 <= center <= S:
-                value[f, left_frame_size - left_avail:left_frame_size + right_avail] =\
-                    signal[center - left_avail: center + right_avail]
+                value[
+                    f, left_frame_size - left_avail : left_frame_size + right_avail
+                ] = signal[center - left_avail : center + right_avail]
     assert value.shape[0] == len(time)
     assert value.shape[1] == frame_size
     return value  # adjust path name here?
@@ -143,7 +149,7 @@ def ola(frame, fs, duration, frame_size: float, frame_rate: float):
     y = np.zeros(duration, dtype=np.float64)
     a = 0
     for f in range(len(frame)):
-        y[a:a + nsize] += frame[f]
+        y[a : a + nsize] += frame[f]
         a += nrate
     return y
 
@@ -159,26 +165,30 @@ def spectral_subtract(inp, frame_rate, silence_percentage: int):
     index = np.where(E < threshold)[0]
     noise_profile = np.median(M[index], axis=0)
     M -= noise_profile
-    np.clip(M, 0, None, out=M)  # limit this to a value greater than 0 to avoid -inf due to the following log
+    np.clip(
+        M, 0, None, out=M
+    )  # limit this to a value greater than 0 to avoid -inf due to the following log
     Y = M * np.exp(1j * np.angle(X))  # DEBUG
     y = ifft(Y).real
     s = ola(y, inp.fs, inp.duration, frame_rate * 2, frame_rate)
     return tracking.Wave(s, inp.fs)
 
 
-def spectrogram(wav: tracking.Wave,
-                frame_size: float,
-                frame_rate: float,
-                window=signal.hann,
-                NFFT='nextpow2',
-                normalized=False) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+def spectrogram(
+    wav: tracking.Wave,
+    frame_size: float,
+    frame_rate: float,
+    window=signal.hann,
+    NFFT="nextpow2",
+    normalized=False,
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """return log-magnitude spectrogram in dB"""
     ftr = frame(wav, frame_size, frame_rate)
     x = ftr.value * window(ftr.value.shape[1])
-    if NFFT == 'nextpow2':
+    if NFFT == "nextpow2":
         NFFT = 2 ** nextpow2(x.shape[1])
     M = np.abs(rfft(x, NFFT))
-    np.clip(M,  1e-12, None, out=M)
+    np.clip(M, 1e-12, None, out=M)
     M = np.log10(M) * 20
     if normalized:
         M = (M.T - np.min(M, axis=1)).T
@@ -189,22 +199,26 @@ def spectrogram(wav: tracking.Wave,
     return M, ftr.time, frequency
 
 
-def spectrogram_centered(wav: tracking.Wave,  # used by rendering
-                         frame_size: float,
-                         time: np.ndarray,
-                         window=signal.hann,
-                         NFFT='nextpow2',
-                         normalized=False) -> Tuple[np.ndarray, np.ndarray]:
+def spectrogram_centered(
+    wav: tracking.Wave,  # used by rendering
+    frame_size: float,
+    time: np.ndarray,
+    window=signal.hann,
+    NFFT="nextpow2",
+    normalized=False,
+) -> Tuple[np.ndarray, np.ndarray]:
     """return log-magnitude spectrogram in dB"""
-    s = wav.value / np.abs(np.max(wav.value))  # make float by normalizing and later clipping is more uniform
+    s = wav.value / np.abs(
+        np.max(wav.value)
+    )  # make float by normalizing and later clipping is more uniform
     assert s.max() == 1
     ftr = frame_centered(s, time, int(round(frame_size * wav.fs)))
     assert ftr.dtype == np.float
     ftr *= window(ftr.shape[1])
-    if NFFT == 'nextpow2':
+    if NFFT == "nextpow2":
         NFFT = 2 ** nextpow2(ftr.shape[1])
     M = np.abs(rfft(ftr, NFFT))
-    np.clip(M,  1e-16, None, out=M)
+    np.clip(M, 1e-16, None, out=M)
     M[:] = np.log10(M) * 20
     if normalized:
         M[:] = (M.T - np.min(M, axis=1)).T
@@ -221,14 +235,16 @@ def correlate_fft(X: np.ndarray):
     D = X.shape[1]
     R = irfft(np.abs(rfft(X, 2 ** nextpow2(2 * D - 1))) ** 2)[:, :D]
     # show relationship to related methods
-    assert np.allclose(R[0], np.correlate(X[0], X[0], mode='full')[D - 1:])
+    assert np.allclose(R[0], np.correlate(X[0], X[0], mode="full")[D - 1 :])
     # assert np.allclose(r, np.convolve(x, x[::-1], mode='full')[n - 1:])
     # from scipy.signal import fftconvolve
     # assert np.allclose(r, fftconvolve(x, x[::-1], mode='full')[n - 1:])
     return R
 
 
-def correlogram(wav: tracking.Wave, frame_size: float, frame_rate: float, normalize: bool = True):
+def correlogram(
+    wav: tracking.Wave, frame_size: float, frame_rate: float, normalize: bool = True
+):
     assert wav.dtype == np.float64
     # t, x = frame(wav, frame_size, frame_rate)
     ftr = frame(wav, frame_size, frame_rate)
@@ -244,7 +260,9 @@ def correlogram(wav: tracking.Wave, frame_size: float, frame_rate: float, normal
     #         signal = ftr.value[m]
     #         R[m, :] = np.correlate(signal, signal, mode='same')[index]  # TODO: use fft2 here instead
     if normalize:
-        R[:, 1:] /= np.tile(R[:, 0], (R.shape[1] - 1, 1)).T  # keep energy in zero-th coeff?
+        R[:, 1:] /= np.tile(
+            R[:, 0], (R.shape[1] - 1, 1)
+        ).T  # keep energy in zero-th coeff?
     frequency = np.r_[np.nan, wav.fs / np.arange(1, R.shape[1])]
     return R, ftr.time, frequency
 

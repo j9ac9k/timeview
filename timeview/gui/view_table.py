@@ -14,17 +14,18 @@ logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 
 # pastel colors, will change to color-blind with an alternate option of bright
-colors = [(146, 198, 255),
-          (151, 240, 170),
-          (255, 159, 154),
-          (208, 187, 255),
-          (255, 254, 163),
-          (176, 224, 230)]
+colors = [
+    (146, 198, 255),
+    (151, 240, 170),
+    (255, 159, 154),
+    (208, 187, 255),
+    (255, 254, 163),
+    (176, 224, 230),
+]
 plot_colors = cycle(colors)
 
 
 class ShowCheckBox(QtWidgets.QWidget):
-
     def __init__(self):
         super().__init__()
         self.checkbox = QtWidgets.QCheckBox()
@@ -36,31 +37,24 @@ class ShowCheckBox(QtWidgets.QWidget):
 
 
 class ViewTable(QtWidgets.QTableWidget):
-    rendererChanged = Signal(View, name='rendererChanged')
-    colorChanged = Signal(View, name='colorChanged')
-    plotViewObj = Signal(View, name='plotViewObj')
-    tableWidth = Signal(int, name='tableWidth')
-    colWidths = Signal(list, name='colWidths')
-    showPlot = Signal(View, int, name='showPlot')
-    hidePlot = Signal(View, name='hidePlot')
-    newSelected = Signal(View, name='newSelected')
+    rendererChanged = Signal(View, name="rendererChanged")
+    colorChanged = Signal(View, name="colorChanged")
+    plotViewObj = Signal(View, name="plotViewObj")
+    tableWidth = Signal(int, name="tableWidth")
+    colWidths = Signal(list, name="colWidths")
+    showPlot = Signal(View, int, name="showPlot")
+    hidePlot = Signal(View, name="hidePlot")
+    newSelected = Signal(View, name="newSelected")
 
-    def __init__(self,
-                 display_panel,
-                 col_widths: Optional[List[int]]=None) -> None:
+    def __init__(self, display_panel, col_widths: Optional[List[int]] = None) -> None:
         super().__init__()
         self.display_panel = display_panel
         self.main_window = self.display_panel.main_window
         self.panel: Optional[Panel] = None
-        self.columns = ('File',
-                        'Type',
-                        'Rendering',
-                        'Show',
-                        'Color')
+        self.columns = ("File", "Type", "Rendering", "Show", "Color")
         self.setColumnCount(len(self.columns))
         self.setHorizontalHeaderLabels(self.columns)
-        self.setSizePolicy(QtWidgets.QSizePolicy.Fixed,
-                           QtWidgets.QSizePolicy.Expanding)
+        self.setSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Expanding)
         self.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
         self.setSelectionMode(QtWidgets.QAbstractItemView.SingleSelection)
         self.verticalHeader().hide()
@@ -103,7 +97,7 @@ class ViewTable(QtWidgets.QTableWidget):
     def selectedView(self) -> View:
         """Returns the currently selected view"""
         if not self.selectedIndexes():
-            logger.warning('Selected Indexes returned nothing')
+            logger.warning("Selected Indexes returned nothing")
             self.selectRow(0)
         assert self.panel is not None
         return self.panel.selected_view
@@ -113,7 +107,7 @@ class ViewTable(QtWidgets.QTableWidget):
             row = self.selectedIndexes()[0].row()
             return row
         elif self.rowCount() > 0:
-            logger.error('Rows exist but no row selected, selecting last row as guess')
+            logger.error("Rows exist but no row selected, selecting last row as guess")
             assert self.panel is not None
             row = self.panel.views.index(self.panel.selected_view) - 1
             self.selectRow(row)
@@ -121,19 +115,19 @@ class ViewTable(QtWidgets.QTableWidget):
         else:
             return -1
 
-    @Slot(name='evalSelection')
+    @Slot(name="evalSelection")
     def evalSelection(self):
         if self.rowCount() > 1:
             if 0 <= self.selectedRow() < self.rowCount():
                 self.selectRow(self.selectedRow(), bypass=True)
             else:
                 if self.panel.selected_view:
-                    logger.error('No selected row, querying model')
+                    logger.error("No selected row, querying model")
                     row = self.panel.views.index(self.panel.selected_view)
                     self.selectRow(row, bypass=False)
                 else:
-                    logger.error('No selected row, no model.Panel.selected_view either')
-                    self.panel.set_selected_view(self.panel.views[self.rowCount()-1])
+                    logger.error("No selected row, no model.Panel.selected_view either")
+                    self.panel.set_selected_view(self.panel.views[self.rowCount() - 1])
                     row = self.panel.views.index(self.panel.selected_view)
                     self.selectRow(row, bypass=False)
 
@@ -151,7 +145,7 @@ class ViewTable(QtWidgets.QTableWidget):
         if new_selected_view is not previous_selected_view:
             self.newSelected.emit(new_selected_view)
 
-    @Slot(name='changeRenderer')
+    @Slot(name="changeRenderer")
     def changeRenderer(self):
         # select the row of the sender
         self.selectRow(self.rowFromWidget(self.sender()))
@@ -167,13 +161,13 @@ class ViewTable(QtWidgets.QTableWidget):
                 return index.row(), index.column()
             widget = widget.parent()
         else:
-            logging.error('Could not find appropriate widget to map')
+            logging.error("Could not find appropriate widget to map")
             raise IndexError
 
     def rowFromWidget(self, widget) -> int:
         return self.indexFromWidget(widget)[0]
 
-    @Slot(int, name='toggleView')
+    @Slot(int, name="toggleView")
     def toggleView(self, state: int):
         self.selectRow(self.rowFromWidget(self.sender()))
         if state == 2:
@@ -192,7 +186,7 @@ class ViewTable(QtWidgets.QTableWidget):
         desired_length = 32
         if len(text) > desired_length:
             beginning = text[: ceil(desired_length / 2)]
-            end = text[(len(text) - ceil(desired_length / 2)) + 1:]
+            end = text[(len(text) - ceil(desired_length / 2)) + 1 :]
             text = beginning + "⋯" + end
         assert len(text) <= 32
         fileLabel = QtWidgets.QLabel(text)
@@ -202,9 +196,9 @@ class ViewTable(QtWidgets.QTableWidget):
         fileLabel.setToolTip(str(view_object.track.path))
         fileLabel.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         fileLabel.customContextMenuRequested.connect(self.viewPopup)
-        self.setCellWidget(self.panel.views.index(view_object),
-                           self.colNameToIndex("File"),
-                           fileLabel)
+        self.setCellWidget(
+            self.panel.views.index(view_object), self.colNameToIndex("File"), fileLabel
+        )
 
     def _configureTrackItem(self, view_object: View):
         assert self.panel is not None
@@ -214,31 +208,40 @@ class ViewTable(QtWidgets.QTableWidget):
         trackLabel.setAlignment(QtCore.Qt.AlignCenter)
         trackLabel.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         trackLabel.customContextMenuRequested.connect(self.viewPopup)
-        self.setCellWidget(self.panel.views.index(view_object),
-                           self.colNameToIndex("Type"),
-                           trackLabel)
+        self.setCellWidget(
+            self.panel.views.index(view_object), self.colNameToIndex("Type"), trackLabel
+        )
 
     def _configureComboBox(self, view_object: View):
         assert self.panel is not None
         render_combo_box = QtWidgets.QComboBox()
-        render_combo_box.addItems([str(renderer) for renderer in view_object.track2renderers[
-                                   type(view_object.track).__name__
-                                   ].keys()])
+        render_combo_box.addItems(
+            [
+                str(renderer)
+                for renderer in view_object.track2renderers[
+                    type(view_object.track).__name__
+                ].keys()
+            ]
+        )
         assert isinstance(view_object.renderer, Renderer)
         render_combo_box.setCurrentText(view_object.renderer.name)
-        render_combo_box.activated['QString'].connect(self.changeRenderer)
-        self.setCellWidget(self.panel.views.index(view_object),
-                           self.colNameToIndex("Rendering"),
-                           render_combo_box)
+        render_combo_box.activated["QString"].connect(self.changeRenderer)
+        self.setCellWidget(
+            self.panel.views.index(view_object),
+            self.colNameToIndex("Rendering"),
+            render_combo_box,
+        )
 
     def _configureShowBox(self, view_object: View):
         assert self.panel is not None
         show_check_box = ShowCheckBox()
         show_check_box.checkbox.setChecked(view_object.show)
         show_check_box.checkbox.stateChanged.connect(self.toggleView)
-        self.setCellWidget(self.panel.views.index(view_object),
-                           self.colNameToIndex('Show'),
-                           show_check_box)
+        self.setCellWidget(
+            self.panel.views.index(view_object),
+            self.colNameToIndex("Show"),
+            show_check_box,
+        )
 
     def _configureColor(self, view_object: View):
         assert self.panel is not None
@@ -252,7 +255,7 @@ class ViewTable(QtWidgets.QTableWidget):
         color_button.clicked.connect(self.changeColor)
         self.setCellWidget(row, col, color_button)
 
-    @Slot(name='changeColor')
+    @Slot(name="changeColor")
     def changeColor(self):
         self.selectRow(self.rowFromWidget(self.sender()))
         existing_color = createQColor(self.selectedView().color)
@@ -261,7 +264,7 @@ class ViewTable(QtWidgets.QTableWidget):
             dialog.setCustomColor(index, createQColor(color))
         color = dialog.getColor(existing_color)
         if not color.isValid():
-            logging.warning(f'Non valid color {color.getRgb()[0:3]}')
+            logging.warning(f"Non valid color {color.getRgb()[0:3]}")
             return
         r, g, b = color.getRgb()[0:3]
         self.selectedView().set_color((r, g, b))
@@ -287,13 +290,14 @@ class ViewTable(QtWidgets.QTableWidget):
         self.plotViewObj.emit(view_object)
         self.selectRow(pos)
 
-    @Slot(name='calcColumnWidths')
+    @Slot(name="calcColumnWidths")
     def calcColumnWidths(self):
         self.resizeColumnsToContents()
-        self.colWidths.emit([self.columnWidth(col)
-                             for col in range(self.columnCount())])
+        self.colWidths.emit(
+            [self.columnWidth(col) for col in range(self.columnCount())]
+        )
 
-    @Slot(list, name='setColumnWidths')
+    @Slot(list, name="setColumnWidths")
     def setColumnWidths(self, widths: List[int]):
         for col, width in enumerate(widths):
             self.setColumnWidth(col, width)
@@ -301,78 +305,76 @@ class ViewTable(QtWidgets.QTableWidget):
         self.setFixedWidth(new_width)
         # self.updateMaxWidth.emit()
 
-    @Slot(QtCore.QPoint, name='viewPopup')
+    @Slot(QtCore.QPoint, name="viewPopup")
     def viewPopup(self, point):
         if isinstance(self.sender(), QtWidgets.QHeaderView):
             row = self.sender().logicalIndexAt(point)
         elif isinstance(self.sender(), QtWidgets.QLabel):
             row = self.rowFromWidget(self.sender())
         else:
-            logging.error(f'do not know how to handle getting index of ',
-                          f'{self.sender()} object')
+            logging.error(
+                f"do not know how to handle getting index of ",
+                f"{self.sender()} object",
+            )
             raise TypeError
         view = self.panel.views[row]
         menu = QtWidgets.QMenu(self.verticalHeader())
         menu.clear()
-        move_menu = menu.addMenu('&Move View')
+        move_menu = menu.addMenu("&Move View")
         link_menu = menu.addMenu("&Link Track")
         copy_menu = menu.addMenu("Copy View")
 
-        linkAction = QtWidgets.QAction('Create Link in this Panel', self)
-        linkAction.triggered.connect(partial(self.display_panel.linkTrack,
-                                             view,
-                                             self.main_window.model.panels.index(self.panel)))
+        linkAction = QtWidgets.QAction("Create Link in this Panel", self)
+        linkAction.triggered.connect(
+            partial(
+                self.display_panel.linkTrack,
+                view,
+                self.main_window.model.panels.index(self.panel),
+            )
+        )
         link_menu.addAction(linkAction)
         link_menu.addSeparator()
 
         copyAction = QtWidgets.QAction("Duplicate View in this Panel", self)
-        copyAction.triggered.connect(partial(self.display_panel.copyView,
-                                             view,
-                                             self.main_window.model.panels.index(self.panel)))
+        copyAction.triggered.connect(
+            partial(
+                self.display_panel.copyView,
+                view,
+                self.main_window.model.panels.index(self.panel),
+            )
+        )
         copy_menu.addAction(copyAction)
         copy_menu.addSeparator()
 
         for index, panel in enumerate(self.main_window.model.panels):
             if panel is self.panel:
                 continue
-            linkAction = QtWidgets.QAction(f'Link to Panel {index + 1}',
-                                           self)
-            linkAction.triggered.connect(partial(self.display_panel.linkTrack,
-                                                 view,
-                                                 index))
+            linkAction = QtWidgets.QAction(f"Link to Panel {index + 1}", self)
+            linkAction.triggered.connect(
+                partial(self.display_panel.linkTrack, view, index)
+            )
             link_menu.addAction(linkAction)
 
-            moveAction = QtWidgets.QAction(f'Move To Panel {index + 1}',
-                                           self)
-            moveAction.triggered.connect(partial(self.display_panel.moveView,
-                                                 view,
-                                                 index))
+            moveAction = QtWidgets.QAction(f"Move To Panel {index + 1}", self)
+            moveAction.triggered.connect(
+                partial(self.display_panel.moveView, view, index)
+            )
             move_menu.addAction(moveAction)
 
-            copyAction = QtWidgets.QAction(f'Copy to Panel {index + 1}',
-                                           self)
-            copyAction.triggered.connect(partial(self.display_panel.copyView,
-                                                 view,
-                                                 index))
+            copyAction = QtWidgets.QAction(f"Copy to Panel {index + 1}", self)
+            copyAction.triggered.connect(
+                partial(self.display_panel.copyView, view, index)
+            )
             copy_menu.addAction(copyAction)
 
-        moveAction = QtWidgets.QAction(f'Move to New Panel',
-                                       self)
-        moveAction.triggered.connect(partial(self.display_panel.moveView,
-                                             view,
-                                             -1))
+        moveAction = QtWidgets.QAction(f"Move to New Panel", self)
+        moveAction.triggered.connect(partial(self.display_panel.moveView, view, -1))
 
-        linkAction = QtWidgets.QAction(f'Link to New Panel',
-                                       self)
-        linkAction.triggered.connect(partial(self.display_panel.linkTrack,
-                                             view,
-                                             -1))
+        linkAction = QtWidgets.QAction(f"Link to New Panel", self)
+        linkAction.triggered.connect(partial(self.display_panel.linkTrack, view, -1))
 
-        copyAction = QtWidgets.QAction(f'Copy to New Panel',
-                                       self)
-        copyAction.triggered.connect(partial(self.display_panel.copyView,
-                                             view,
-                                             -1))
+        copyAction = QtWidgets.QAction(f"Copy to New Panel", self)
+        copyAction.triggered.connect(partial(self.display_panel.copyView, view, -1))
 
         move_menu.addSeparator()
         link_menu.addSeparator()

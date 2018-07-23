@@ -12,33 +12,29 @@ from .gui import TimeView
 def parse(args: Namespace):
     # ENHANCE:
     # think about how to specify CLI loading configurations in a .cfg file
-    if args.configuration == 'default':  # one object per panel
+    if args.configuration == "default":  # one object per panel
         app = TimeView()
         for i, path in enumerate(args.path):
-            print(f'Loading {path}')
+            print(f"Loading {path}")
             app.add_view_from_file(Path(path), panel_index=i)
         app.start()
-    elif args.configuration == 'labeling':
+    elif args.configuration == "labeling":
         raise NotImplementedError
     else:
-        raise Exception('unhandled configuration')
+        raise Exception("unhandled configuration")
 
 
 def main():
-    configurations = ['default']  # , 'labeling']
+    configurations = ["default"]  # , 'labeling']
     parser = ArgumentParser(
-                description=__doc__,
-                epilog="© Copyright 2009-2018, TimeView Developers",
-                prog='TimeView')
-    parser.add_argument('-c',
-                        '--configuration',
-                        type=str,
-                        default='default',
-                        choices=configurations)
-    parser.add_argument('path',
-                        type=str,
-                        nargs='*',
-                        help='files to load')
+        description=__doc__,
+        epilog="© Copyright 2009-2018, TimeView Developers",
+        prog="TimeView",
+    )
+    parser.add_argument(
+        "-c", "--configuration", type=str, default="default", choices=configurations
+    )
+    parser.add_argument("path", type=str, nargs="*", help="files to load")
     parser.set_defaults(func=parse)
     args = parser.parse_args()
     args.func(args)
