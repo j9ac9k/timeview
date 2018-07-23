@@ -17,9 +17,8 @@ matrix:
 install:
   - git clone --depth 1 git://github.com/astropy/ci-helpers.git
   - source ci-helpers/travis/setup_conda.sh
-  - pip install numpy
-  - pip install ".[test]"
-  - pip install ".[dev]"
+  - "pip install pipenv --upgrade-strategy=only-if-needed"
+  - "pipenv --python=3.6 install --dev"
 
 script: 
   - python --version 
