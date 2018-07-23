@@ -25,7 +25,7 @@ REQUIRED = [
 
 TESTS_REQUIRE = ["pytest", "pytest-qt", "pytest-runner"]
 
-DEV_REQUIRE = ["black", "pre-config"]
+DEV_REQUIRE = ["black", "pre-config", "flake8-mypy", "flake8-bugbear"]
 
 
 # here = os.path.abspath(os.path.dirname(__file__))

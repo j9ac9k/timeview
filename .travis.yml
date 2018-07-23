@@ -17,10 +17,16 @@ matrix:
 install:
   - git clone --depth 1 git://github.com/astropy/ci-helpers.git
   - source ci-helpers/travis/setup_conda.sh
+  - pip install numpy
+  - pip install ".[test]"
+  - pip install ".[dev]"
 
 script: 
   - python --version 
-  - pip install numpy
-  - pip install ".[test]"
+  - flake8 .
   - black . --check
   - $MAIN_CMD $SETUP_CMD
+
+notifications:
+  on_success: change
+  on_failure: always

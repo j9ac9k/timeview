@@ -1,10 +1,7 @@
 environment:
   global:
     PYTHON: "C:\\Python36-x64"
-    ARCH: "64"
-
-platform:
-  -x64
+    PLATFORM: x64
 
 install:
   - ps: if ($env:APPVEYOR_PULL_REQUEST_NUMBER -and $env:APPVEYOR_BUILD_NUMBER -ne ((Invoke-RestMethod `
@@ -26,12 +23,14 @@ install:
   - "python -m pip install --upgrade pip"
   
   - "pip install .[test]"
+  - "pip install .[dev]"
 
 build: off
 
 test_script:
   -  "%PYTHON%\\python.exe -m pytest -v ."
   -  "%PYTHON%\\python.exe -m black . --check"
+  -  "%PYTHON%\\python.exe -m flake8"
 
 artifacts:
   - path: dist\*
