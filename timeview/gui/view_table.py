@@ -224,7 +224,7 @@ class ViewTable(QtWidgets.QTableWidget):
         render_combo_box.addItems([str(renderer) for renderer in view_object.track2renderers[
                                    type(view_object.track).__name__
                                    ].keys()])
-        assert isinstance(view_object.renderer, Renderer) 
+        assert isinstance(view_object.renderer, Renderer)
         render_combo_box.setCurrentText(view_object.renderer.name)
         render_combo_box.activated['QString'].connect(self.changeRenderer)
         self.setCellWidget(self.panel.views.index(view_object),

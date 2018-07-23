@@ -18,7 +18,6 @@ import logging
 import os
 import contextlib
 from builtins import str
-import unittest
 from pathlib import Path
 from typing import List
 
@@ -576,7 +575,8 @@ class Wave(Track):
             # from pysig import multirate
             #  import fractions
             #  return type(self)(multirate.resample(self._value, fractions.Fraction(fs, self._fs)), fs)
-            return type(self)(multirate.resample(self._value, self._fs, fs), fs)
+            # return type(self)(multirate.resample(self._value, self._fs, fs), fs)
+            raise NotImplementedError
         else:
             return self
 
@@ -701,6 +701,7 @@ class Wave(Track):
         time = numpy.round(numpy.interp(time, x, y)).astype(numpy.int)
         # index = int(time * self.fs)
         self._value = self._value[time]
+
 
 class TimeValue(Track):
     def __init__(self, time, value, fs, duration, path=None):
@@ -853,7 +854,6 @@ class TimeValue(Track):
             self.set_duration(duration)
         self.path = name
         return self
-
 
     @classmethod
     def read_f0(cls, name, frameRate=0.01, frameSize=0.0075, fs=48000):
@@ -2304,4 +2304,3 @@ class HetMultiTrack(MultiTrack):  # may want to define common abstract class ins
 
 #     def test_timeValue(self):
 #         pass  # TODO: implement me!
-
