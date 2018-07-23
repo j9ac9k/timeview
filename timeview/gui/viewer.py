@@ -17,7 +17,7 @@ from PyQt5 import QtHelp
 from qtpy import QtGui, QtCore
 from qtpy.QtWidgets import QFileDialog, QMessageBox, QScrollArea, QWidget, QVBoxLayout, QMainWindow, QDesktopWidget,\
     QAction, QFrame, QTabWidget, QSplitter, QDockWidget, QStyleFactory, QApplication, qApp
-from qtpy.QtCore import Slot, Signal, QDir
+from qtpy.QtCore import Slot, Signal
 import pyqtgraph as pg
 
 # QtAwesome may give us difficulty in Windows 10 see:
