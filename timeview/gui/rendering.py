@@ -7,16 +7,17 @@ from math import floor, ceil
 import numpy as np
 import pyqtgraph as pg
 from qtpy import QtCore, QtGui, QtWidgets
-from qtpy.QtCore import Slot, Signal
+from qtpy.QtCore import Signal
 
 from timeview.dsp import tracking, dsp, processing
 from .plot_objects import InfiniteLinePlot
 
 if TYPE_CHECKING:
-    from .model import View
+    from .model import View  # noqa: F401
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
+
 
 class InvalidDataError(Exception):
     pass
@@ -717,7 +718,6 @@ class Partition(Renderer):
                                             emit_signal=True)
         self.item.updatePartitionPosition.emit(index)
 
-    @Slot(pg.ViewBox, Tuple, name='refreshBounds')
     def refreshBounds(self, _, xrange: Tuple[float, float]):
         # determine the lines in the view
         x_min, x_max = xrange
@@ -863,6 +863,7 @@ class Event(Renderer):
     def render(self, plot_area) -> Tuple[pg.AxisItem, pg.ViewBox]:
         raise NotImplementedError
         # TODO: implement me: adding, deleting, moving of events
+
 
 def get_renderer_classes(accepts: Optional[tracking.Track] = None) -> List[Type[Renderer]]:
 

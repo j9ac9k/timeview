@@ -118,7 +118,8 @@ class ProcessingDialog(QtWidgets.QDialog):
 
     def checkCurrentSelections(self):
         current_selected_track = self.parent.getSelectedTrack()
-        for track_type in self.processor.acquire.values():
+        # for track_type in self.processor.acquire.values():
+        for track_type in self.processor.acquire._field_types.values():
             for combo_box in self.track_layout.keys():
                 if combo_box.count() == 1:
                     combo_box.setCurrentIndex(0)
@@ -137,7 +138,7 @@ class ProcessingDialog(QtWidgets.QDialog):
 
     def createTrackLayout(self):
         layout = QtWidgets.QFormLayout()
-        for track_name, track_type in self.processor.acquire.items():
+        for track_name, track_type in self.processor.acquire._field_types.items():
             combo_box = QtWidgets.QComboBox()
 
             tracks = [view.track

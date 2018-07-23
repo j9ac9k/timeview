@@ -1,6 +1,6 @@
 import logging
 from abc import ABCMeta, abstractmethod
-from typing import Tuple, Dict, Union, Callable, NamedTuple, Optional, ClassVar
+from typing import Tuple, Dict, Union, Callable, NamedTuple, Optional, Any
 
 import numpy as np
 from scipy import signal
@@ -38,27 +38,23 @@ class DefaultProgressTracker:
 
 class Processor(metaclass=ABCMeta):
     name = "Processor"
-    acquire = NamedTuple('acquire', [('wave', tracking.Wave), 
+    acquire = NamedTuple('acquire', [('wave', tracking.Wave),
                                      ('active', tracking.Partition)])
 
     def __init__(self):
-        self.data = Data(wave= None, active=None)
+        self.data = Data(wave=None, active=None)
         self.parameters: Dict[str, Any] = {}  # default parameters
         self.progressTracker = DefaultProgressTracker()
 
     def set_data(self, data: Dict[str, Tracks]) -> None:
-        # for key, value in data.items():
-        #     if not isinstance(value, Data._field_types[key]):
-        #         raise InvalidDataError
-        
         wav = data.get('wave')
         if wav is not None and not isinstance(wav, tracking.Wave):
             raise InvalidDataError
-        
+
         active = data.get('active')
         if active is not None and not isinstance(wav, tracking.Partition):
             raise InvalidDataError
-        
+
         self.data = Data(wave=wav,
                          active=active)
 
@@ -84,10 +80,10 @@ class Processor(metaclass=ABCMeta):
         # additional parameter checking can be performed here
 
     @abstractmethod
-    def process(self, progressTracker=None) -> Tuple[Tracks, ...]: pass  
+    def process(self, progressTracker=None) -> Tuple[Tracks, ...]: pass
 
     def del_data(self):
-        self.data = Data(wave= None, active=None)
+        self.data = Data(wave=None, active=None)
 
 
 def get_processor_classes() -> Dict[str, Callable[..., Processor]]:
@@ -145,15 +141,13 @@ class Filter(Processor):
         wav = self.data.wave
         x = wav.value
         self.progressTracker.update(10)
-        y = signal.lfilter(self.parameters['B'],
-                          self.parameters['A'], x).astype(x.dtype)
+        y = signal.lfilter(self.parameters['B'], self.parameters['A'], x).astype(x.dtype)
         self.progressTracker.update(90)
         new_track = tracking.Wave(y,
                                   fs=wav.fs,
                                   path=wav.path
                                           .with_name(wav.path.stem + '-filtered')
-                                          .with_suffix(tracking.Wave
-                                                              .default_suffix)),
+                                          .with_suffix(tracking.Wave.default_suffix)),
         return new_track
 
 
@@ -352,7 +346,7 @@ class ActivityDetector(Processor):
 class F0Analyzer(Processor):
     name = 'F0 Analysis'
     acquire = NamedTuple('acquire', [('wave', tracking.Wave)])
-    
+
     def __init__(self):
         super().__init__()
         self.t0_min = 0
@@ -396,12 +390,7 @@ class F0Analyzer(Processor):
         # find best sequence
         seq, _ = viterbi.search_smooth(R, self.parameters['smooth'])
         self.progressTracker.update(80)
-        # if 0:
-        #     from matplotlib import pyplot as plt
-        #     plt.imshow(R.T, aspect='auto', origin='lower', cmap=plt.cm.pink)
-        #     plt.plot(seq)
-        #     plt.show()
-        # F0 track
+
         f0 = wav.fs / (t0_min + seq)
         # degree of periodicity
         dop = R[np.arange(R.shape[0]), seq]
@@ -445,8 +434,6 @@ class F0Analyzer(Processor):
 class PeakTracker(Processor):
     name = 'Peak Tracker'
     acquire = NamedTuple('acquire', [('wave', tracking.Wave)])
-                                        #  'active': tracking.Partition])
-
 
     def __init__(self):
         super().__init__()
@@ -458,8 +445,9 @@ class PeakTracker(Processor):
                            'NFFT': 512}
 
     def get_parameters(self):
-        if 'wave' in self.data:
-            self.parameters['freq_max'] = self.data.wave.fs / 2
+        if 'wave' in self.acquire._field_types.keys():
+            if self.data.wave is not None:
+                self.parameters['freq_max'] = self.data.wave.fs / 2
         return super().get_parameters()
 
     def set_parameters(self, parameter: Dict[str, str]):
@@ -500,10 +488,10 @@ class PeakTracker(Processor):
 
 class PeakTrackerActiveOnly(PeakTracker):
     name = 'Peak Tracker (active regions only)'
-    acquire = NamedTuple('acquire', [('wave', tracking.Wave), 
+    acquire = NamedTuple('acquire', [('wave', tracking.Wave),
                                      ('active', tracking.Partition)])
 
-    def process(self, progressTracker=None, **kwargs) -> Tuple[tracking.TimeValue]:        
+    def process(self, progressTracker=None, **kwargs) -> Tuple[tracking.TimeValue]:
         if progressTracker is not None:
             self.progressTracker = progressTracker
         peak = super().process(**kwargs)[0]

@@ -5,16 +5,14 @@ from copy import deepcopy
 from timeview.gui import rendering
 from timeview.dsp import tracking
 
-# from . import rendering
-# from ..dsp import tracking
-
 
 class UnknownRendererError(Exception):
     pass
 
 
 class View:
-    track2renderers = {type(t).__name__: {r.name: r for r in rendering.get_renderer_classes(t)}
+    track2renderers = {t.__name__:  # type: ignore  # noqa: T400
+                       {r.name: r for r in rendering.get_renderer_classes(t)}
                        for t in tracking.get_track_classes()}
 
     def __init__(self,
@@ -83,7 +81,13 @@ class Panel:
                  **parameters: str) -> View:
         if not pos:
             pos = len(self.views)
-        self.views.insert(pos, View(track, self, renderer_name=renderer_name, show=show, color=color, **parameters))
+        self.views.insert(pos,
+                          View(track,
+                               self,
+                               renderer_name=renderer_name,
+                               show=show,
+                               color=color,
+                               **parameters))
         if pos == 0:
             self.selected_view = self.views[pos]
         return self.views[pos]

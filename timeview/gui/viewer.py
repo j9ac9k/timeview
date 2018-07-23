@@ -434,7 +434,7 @@ class Viewer(QMainWindow):
     def resetEnabledProcessors(self):
         for action, processor in self.processor_action.items():
             action.setEnabled(False)
-            for track_name, track_type in processor.acquire.items():
+            for track_name, track_type in processor.acquire._field_types.items():
                 tracks = [view.track
                           for panel in self.model.panels
                           for view in panel.views
