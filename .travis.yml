@@ -21,10 +21,10 @@ install:
   - "pipenv --python=3.6 install --dev"
 
 script: 
-  - python --version 
-  - flake8 .
-  - black . --check
-  - $MAIN_CMD $SETUP_CMD
+  - pipenv run python --version 
+  - pipenv run flake8
+  - pipenv run black . --check
+  - pipenv run $MAIN_CMD $SETUP_CMD
 
 notifications:
   on_success: change
