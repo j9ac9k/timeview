@@ -4,16 +4,15 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-timeview = {editable = true, path = ".", git = "https://github.com/j9ac9k/timeview.git"}
-numba = ">=0.38.1"
 numpy = ">=1.14,<=1.15"
+numba = ">=0.38.1"
 pyqtgraph = ">=0.10.0"
 scipy = ">=1.1.0"
-pyEDFlib = ">=0.1.12"
 PyQt5 = "<=5.12,>=5.10.1"
 QtAwesome = ">=0.4.4"
 QtPy = ">=1.4.2"
 SQLAlchemy = ">=1.2.9"
+pyEDFlib = ">=0.1.12"
 
 [dev-packages]
 pytest = ">=3.6.2"
@@ -21,6 +20,8 @@ pytest-qt = ">=2.4.1"
 pytest-runner = ">=4.2"
 flake8-mypy = ">=17.8.0"
 flake8-bugbear = ">=18.2.0"
+black = ">=18.6b4"
+timeview = {editable = true, path = "."}
 
 [requires]
 python_version = "3.6"

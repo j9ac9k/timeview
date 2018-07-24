@@ -1538,7 +1538,7 @@ class Partition(Track):
         if len(self._value):
             assert (
                 duration > self._time[-2]
-            ), "can't set duration to a smaller or equal value than the next-to-last boundary" " (this would result in losing the last value)"
+            ), "can't set duration to a smaller or equal value than the next-to-last boundary (this would result in losing the last value)"
             self._time[-1] = duration
         else:
             if duration != 0:
