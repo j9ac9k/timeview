@@ -19,13 +19,13 @@ matrix:
 install:
   - git clone --depth 1 git://github.com/astropy/ci-helpers.git
   - source ci-helpers/travis/setup_conda.sh
-  - "pip install pipenv --upgrade-strategy=only-if-needed"
-  - "pipenv --python=3.6 install --dev ."
+  - pip install pipenv --upgrade-strategy=only-if-needed
+  - pipenv --python=3.6 install --dev .
 
 script: 
   - pipenv run python --version 
   - pipenv run $MAIN_CMD $SETUP_CMD
-  - pipenv run black . --check
+  - pipenv run black timeview --check
   - pipenv run flake8
 
 notifications:
@@ -39,6 +39,5 @@ skip_commits:
     - '*.md'
     - .gitignore
     - .travis.yml
-    - 
     - LICENSE.txt
 
