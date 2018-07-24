@@ -6,22 +6,30 @@ name = "pypi"
 [packages]
 numpy = ">=1.14,<=1.15"
 numba = ">=0.38.1"
-pyqtgraph = ">=0.10.0"
 scipy = ">=1.1.0"
 PyQt5 = "<=5.12,>=5.10.1"
-QtAwesome = ">=0.4.4"
+pyqtgraph = ">=0.10.0"
 QtPy = ">=1.4.2"
+QtAwesome = ">=0.4.4"
 SQLAlchemy = ">=1.2.9"
 pyEDFlib = ">=0.1.12"
 
 [dev-packages]
+timeview = {editable = true, path = "."}
+pre-commit = "*"
 pytest = ">=3.6.2"
 pytest-qt = ">=2.4.1"
 pytest-runner = ">=4.2"
-flake8-mypy = ">=17.8.0"
+flake8 = "*"
 flake8-bugbear = ">=18.2.0"
+flake8-mypy = "*"
+mypy = ">=0.620"
+readme_renderer = "*"
+recommonmark = "*"
 black = ">=18.6b4"
-timeview = {editable = true, path = "."}
+setuptools = ">=39.2.0"
+twine = ">=1.11.0"
+wheel = ">=0.31.1"
 
 [requires]
 python_version = "3.6"
