@@ -31,3 +31,14 @@ script:
 notifications:
   on_success: change
   on_failure: always
+
+skip_commits:
+  files:
+    - docs/**/*
+    - '**/*.rst'
+    - '*.md'
+    - .gitignore
+    - .travis.yml
+    - 
+    - LICENSE.txt
+
