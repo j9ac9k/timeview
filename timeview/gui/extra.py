@@ -2,8 +2,7 @@ from qtpy import QtWidgets, QtGui
 
 
 class Widget(QtWidgets.QWidget):
-
-    def __init__(self, text: str="", panel_info=None) -> None:
+    def __init__(self, text: str = "", panel_info=None) -> None:
         super().__init__()
         layout = QtWidgets.QVBoxLayout()
         self.label = QtWidgets.QLabel(f"Hello, I'm {text}!")
@@ -12,20 +11,24 @@ class Widget(QtWidgets.QWidget):
         font = QtGui.QFont()
         font.setPointSize(16)
         self.label.setFont(font)
-        self.setSizePolicy(QtWidgets.QSizePolicy.MinimumExpanding,
-                           QtWidgets.QSizePolicy.MinimumExpanding)
-        self.setStyleSheet("""
+        self.setSizePolicy(
+            QtWidgets.QSizePolicy.MinimumExpanding,
+            QtWidgets.QSizePolicy.MinimumExpanding,
+        )
+        self.setStyleSheet(
+            """
         QWidget {
             padding: 0px;
             margin: 0px;
             background: darkGreen;
         }
-        """)
+        """
+        )
 
 
 class Spacer(QtWidgets.QWidget):
-
     def __init__(self):
         super().__init__()
-        self.setSizePolicy(QtWidgets.QSizePolicy.Expanding,
-                           QtWidgets.QSizePolicy.Expanding)
+        self.setSizePolicy(
+            QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding
+        )
