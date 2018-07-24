@@ -25,7 +25,7 @@ install:
 script: 
   - pipenv run python --version 
   - pipenv run $MAIN_CMD $SETUP_CMD
-  - pipenv run black timeview --check
+  - pipenv run black . --check
   - pipenv run flake8
 
 notifications:

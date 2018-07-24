@@ -27,8 +27,8 @@ install:
 build: off
 
 test_script:
-  -  "pipenv run python setup.py test -v ."
-  -  "pipenv run black --check"
+  -  "pipenv run python setup.py test -v"
+  -  "pipenv run black . --check"
 
 artifacts:
   - path: dist\*
