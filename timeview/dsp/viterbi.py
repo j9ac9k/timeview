@@ -31,7 +31,7 @@ def search_smooth(ftr, smooth):  # 100% function-based
         # OBSERVATION t
         if t == 0:
             jindex = np.where(score[0])[0]  # active FROM nodes
-            assert len(jindex), 'no observations for target[0]'
+            assert len(jindex), "no observations for target[0]"
         else:
             iindex = np.where(score[current] > -np.inf)[0]  # possible TO nodes
             # assert len(iindex), 'no observation probabilities above pruning threshold for target[%d]' % t
@@ -42,10 +42,14 @@ def search_smooth(ftr, smooth):  # 100% function-based
                 # TRANSITION jindex -> i @ t
                 # zeta[jindex] = score[score_prv, jindex] + trans[jindex]
                 # zeta[jindex] = score[score_prv][jindex] + trans[jindex]
-                zeta = score[previous] + trans  # really only needed over jindex, but indexing is slow
+                zeta = (
+                    score[previous] + trans
+                )  # really only needed over jindex, but indexing is slow
                 path[t, i] = zindex = jindex[zeta[jindex].argmax()]
                 score[current, i] += zeta[zindex]
-            assert np.any(score[current] > -np.inf), 'score/prob[t] must not be all below pruning threshold'
+            assert np.any(
+                score[current] > -np.inf
+            ), "score/prob[t] must not be all below pruning threshold"
             jindex = iindex  # new active FROM nodes
     # backward
     assert current == (T - 1) % 2

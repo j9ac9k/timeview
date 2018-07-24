@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 # ch.setLevel(logging.DEBUG)
 # logger.addHandler(ch)
 
-ENGINE_PATH = 'sqlite:///' + str(Path(__file__).with_name('dataset.db'))
+ENGINE_PATH = "sqlite:///" + str(Path(__file__).with_name("dataset.db"))
 
 
 class TableModel(QtCore.QAbstractTableModel):
@@ -43,10 +43,10 @@ class TableModel(QtCore.QAbstractTableModel):
         self.refresh()
 
     # def index(self, row, column, parent=QtCore.QModelIndex()):
-        # return self.createIndex(row, column)
+    # return self.createIndex(row, column)
 
     # def parent(self, child):
-        # return 0
+    # return 0
 
     def rowCount(self, parent=None, *args, **kwargs):
         return len(self.qry)
@@ -83,7 +83,7 @@ class TableModel(QtCore.QAbstractTableModel):
         else:
             # TODO: correctly used?
             self.dataChanged.emit(q_index, q_index)
-            self.widget.statusBar().showMessage('Updated.')
+            self.widget.statusBar().showMessage("Updated.")
             return True
 
     def change_layout(self):
@@ -139,10 +139,10 @@ class ManagerWindow(QMainWindow):
         # self.installEventFilter(self)
 
         # Icons
-        self.addDatasetButton.setIcon(qta.icon('fa.plus'))
-        self.delDatasetButton.setIcon(qta.icon('fa.minus'))
-        self.addFileButton.setIcon(qta.icon('fa.plus'))
-        self.delFileButton.setIcon(qta.icon('fa.minus'))
+        self.addDatasetButton.setIcon(qta.icon("fa.plus"))
+        self.delDatasetButton.setIcon(qta.icon("fa.minus"))
+        self.addFileButton.setIcon(qta.icon("fa.plus"))
+        self.delFileButton.setIcon(qta.icon("fa.minus"))
 
         # first selection
         self.tableViewDataset.selectRow(0)
@@ -155,8 +155,8 @@ class ManagerWindow(QMainWindow):
 
         self.addDatasetButton.clicked.connect(self.add_dataset)
         self.delDatasetButton.clicked.connect(self.del_dataset)
-        self.addFileButton.   clicked.connect(self.add_file)
-        self.delFileButton.   clicked.connect(self.del_file)
+        self.addFileButton.clicked.connect(self.add_file)
+        self.delFileButton.clicked.connect(self.del_file)
 
         # Status bar
         # TODO: timed statusBar (goes empty after a while)
@@ -175,7 +175,9 @@ class ManagerWindow(QMainWindow):
                     self.viewer.application.add_view_from_file(Path(file_name))
 
     def clicked_dataset(self, q_index):  # refresh table of files
-        self.tableModelFile.dataset_id = int(self.tableModelDataset.qry[q_index.row()].id)
+        self.tableModelFile.dataset_id = int(
+            self.tableModelDataset.qry[q_index.row()].id
+        )
         self.tableModelFile.change_layout()
 
     def double_clicked_file(self, q_index):
@@ -204,27 +206,29 @@ class ManagerWindow(QMainWindow):
 
     def add_dataset(self, _e):
         while True:
-            name, ok = QInputDialog.getText(self,
-                                            'New Dataset',
-                                            'Enter the name of the new dataset:')
+            name, ok = QInputDialog.getText(
+                self, "New Dataset", "Enter the name of the new dataset:"
+            )
             if ok:
                 try:
                     # TODO: how to set defaults?
                     self.model.add_dataset(Dataset(name=name))  # parameter=0))
                 except IntegrityError:
                     self.model.session.rollback()
-                    QMessageBox.information(self,
-                                            "Cannot proceed",
-                                            "This dataset name already exists, \
+                    QMessageBox.information(
+                        self,
+                        "Cannot proceed",
+                        "This dataset name already exists, \
                                             please select a different one (or cancel).",
-                                            defaultButton=QMessageBox.Ok)
+                        defaultButton=QMessageBox.Ok,
+                    )
                 else:
                     self.tableViewDataset.model().change_layout()
-                    self.statusBar().showMessage('Added dataset.')
+                    self.statusBar().showMessage("Added dataset.")
                     # self.tableViewDataset.selectRow(len(self.model.dataset) - 1)
                     break
             else:  # cancel
-                self.statusBar().showMessage('Cancelled.')
+                self.statusBar().showMessage("Cancelled.")
                 return  # exit loop
         if len(self.model.get_dataset()) == 1:  # first entry after being empty
             self.tableViewDataset.selectRow(0)
@@ -234,21 +238,26 @@ class ManagerWindow(QMainWindow):
         if sm.hasSelection():
             q_index = sm.selectedRows()
             if len(q_index):
-                if QMessageBox.question(self,
-                                        "Are you sure?",
-                                        "You are about to delete a dataset. \
+                if (
+                    QMessageBox.question(
+                        self,
+                        "Are you sure?",
+                        "You are about to delete a dataset. \
                                         This will also delete the list of files \
                                         associated with this dataset.",
-                                        buttons=QMessageBox.Ok | QMessageBox.Cancel,
-                                        defaultButton=QMessageBox.Cancel) == QMessageBox.Ok:
+                        buttons=QMessageBox.Ok | QMessageBox.Cancel,
+                        defaultButton=QMessageBox.Cancel,
+                    )
+                    == QMessageBox.Ok
+                ):
                     dataset_id = self.tableViewDataset.model().qry[q_index[0].row()].id
                     self.model.del_dataset(dataset_id)
                     self.tableViewDataset.model().change_layout()
-                    self.tableViewFile.   model().change_layout()
+                    self.tableViewFile.model().change_layout()
                     # because files associated with that dataset are deleted also
-                    self.statusBar().showMessage('Deleted dataset.')
+                    self.statusBar().showMessage("Deleted dataset.")
                 else:
-                    self.statusBar().showMessage('Cancelled.')
+                    self.statusBar().showMessage("Cancelled.")
 
     def add_file(self, _e):
         sm = self.tableViewDataset.selectionModel()
@@ -258,10 +267,9 @@ class ManagerWindow(QMainWindow):
                 dataset_qry = self.tableViewDataset.model().qry
                 # dataset_id = dataset_qry[q_index[0].row()].id
                 while True:
-                    paths = QFileDialog.getOpenFileNames(self,
-                                                         "Select one or more files",
-                                                         '',
-                                                         "All Files (*)")[0]
+                    paths = QFileDialog.getOpenFileNames(
+                        self, "Select one or more files", "", "All Files (*)"
+                    )[0]
                     if len(paths):
                         dataset_id = dataset_qry[q_index[0].row()].id
                         files = [File(path=path) for path in paths]
@@ -269,16 +277,15 @@ class ManagerWindow(QMainWindow):
                             self.model.add_files(dataset_id, files)
                         except IntegrityError as e:  # this should not be happening
                             self.model.session.rollback()
-                            QMessageBox.information(self,
-                                                    "Integrity Error",
-                                                    e,
-                                                    defaultButton=QMessageBox.Ok)
+                            QMessageBox.information(
+                                self, "Integrity Error", e, defaultButton=QMessageBox.Ok
+                            )
                         else:
                             self.tableViewFile.model().change_layout()
-                            self.statusBar().showMessage('Added file(s).')
+                            self.statusBar().showMessage("Added file(s).")
                             break
                     else:  # cancel
-                        self.statusBar().showMessage('Cancelled.')
+                        self.statusBar().showMessage("Cancelled.")
                         return  # exit loop
 
     def del_file(self, _e):
@@ -286,8 +293,11 @@ class ManagerWindow(QMainWindow):
         if sm.hasSelection():
             q_index = sm.selectedRows()
             if len(q_index):
-                [self.model.del_file(self.tableViewFile.model().qry[qi.row()].id) for qi in q_index]
+                [
+                    self.model.del_file(self.tableViewFile.model().qry[qi.row()].id)
+                    for qi in q_index
+                ]
                 self.tableViewFile.model().change_layout()
-                self.statusBar().showMessage('Deleted file(s).')
+                self.statusBar().showMessage("Deleted file(s).")
             # else: # cancel
-                # self.statusBar().showMessage('No file(s) selected.')
+            # self.statusBar().showMessage('No file(s) selected.')

@@ -10,7 +10,7 @@ Base = declarative_base()
 
 class Mixin:
     @declared_attr
-    def __tablename__(cls):  # table name is lowercase class name
+    def __tablename__(cls):  # noqa B902 # table name is lowercase class name
         return cls.__name__.lower()
 
     id = Column(Integer, primary_key=True, autoincrement=True)
@@ -25,8 +25,10 @@ class Mixin:
         setattr(self, self.columns[index], value)
 
     def __repr__(self):
-        s = 'id={}: '.format(self.id)
-        s += ' '.join(['{}={}'.format(self.columns[i], self[i]) for i in range(len(self))])
+        s = "id={}: ".format(self.id)
+        s += " ".join(
+            ["{}={}".format(self.columns[i], self[i]) for i in range(len(self))]
+        )
         return s
 
 
@@ -34,16 +36,20 @@ class Dataset(Base, Mixin):  # type: ignore
     name = Column(String, unique=True, nullable=False)
     # parameter = Column(Float, nullable=False)
     # cascade configuration
-    file = relationship('File', back_populates='dataset', cascade='all, delete, delete-orphan')
-    columns = ['name']
+    file = relationship(
+        "File", back_populates="dataset", cascade="all, delete, delete-orphan"
+    )
+    columns = ["name"]
 
 
 class File(Base, Mixin):  # type: ignore
-    path = Column(String, unique=False, nullable=False)  # a file can belong to more than one dataset
-    dataset_id = Column(Integer, ForeignKey('dataset.id'))
+    path = Column(
+        String, unique=False, nullable=False
+    )  # a file can belong to more than one dataset
+    dataset_id = Column(Integer, ForeignKey("dataset.id"))
     # many-to-one
-    dataset = relationship('Dataset', back_populates='file')
-    columns = ['path']
+    dataset = relationship("Dataset", back_populates="file")
+    columns = ["path"]
 
 
 class Model(object):
@@ -65,7 +71,7 @@ class Model(object):
             self.session.add(d)
             self.session.commit()
         else:
-            raise KeyError('dataset_id=%i does not exist' % dataset_id)
+            raise KeyError("dataset_id=%i does not exist" % dataset_id)
 
     def del_dataset(self, dataset_id):
         # TODO: int()?
@@ -74,7 +80,7 @@ class Model(object):
             self.session.delete(d)  # cascading delete
             self.session.commit()
         else:
-            raise KeyError(f'dataset_id={dataset_id} does not exist')
+            raise KeyError(f"dataset_id={dataset_id} does not exist")
 
     def del_file(self, file_id):
         # TODO: int()?
@@ -83,7 +89,7 @@ class Model(object):
             self.session.delete(f)
             self.session.commit()
         else:
-            raise KeyError('file_id=%i does not exist' % file_id)
+            raise KeyError("file_id=%i does not exist" % file_id)
 
     def get_dataset(self, dataset_id=None) -> Dataset:
         """
@@ -112,66 +118,71 @@ class Model(object):
 class TestModel(unittest.TestCase):
     def setUp(self):
         from sqlalchemy import create_engine
-        engine = create_engine('sqlite://',
-                               echo=False)  # memory-based db
+
+        engine = create_engine("sqlite://", echo=False)  # memory-based db
         self.model = Model(engine)
 
     # def test_morebase(self):
-        # d = Dataset(name='one', parameter=0)
-        # f = File(path='file_path')
-        # s = str(d)
-        # s = str(f)
+    # d = Dataset(name='one', parameter=0)
+    # f = File(path='file_path')
+    # s = str(d)
+    # s = str(f)
 
     def test_allthethings(self):
         from sqlalchemy.exc import IntegrityError, StatementError
+
         # sqlalchemy ORM
         model = self.model
         # start empty
         self.assertTrue(len(model.get_dataset()) == 0)
         self.assertTrue(len(model.get_file()) == 0)
         with self.assertRaises(KeyError):
-            model.add_files(0, [File(path='')])  # can't add a file for a dataset that doesn't exist
+            model.add_files(
+                0, [File(path="")]
+            )  # can't add a file for a dataset that doesn't exist
         # add dataset
         with self.assertRaises(IntegrityError):
             model.add_dataset(Dataset(name=None, parameter=0))  # not nullable
         model.session.rollback()
-        d = Dataset(name='one', parameter=0)
+        d = Dataset(name="one", parameter=0)
         self.assertTrue(d.id is None)
         model.add_dataset(d)
         self.assertTrue(d.id == 1)
         with self.assertRaises(IntegrityError):
-            model.add_dataset(Dataset(name='one', parameter=0))  # must be unique
+            model.add_dataset(Dataset(name="one", parameter=0))  # must be unique
         model.session.rollback()
-        model.add_dataset(Dataset(name='two', parameter=0))
+        model.add_dataset(Dataset(name="two", parameter=0))
         self.assertTrue(len(model.get_dataset()) == 2)
         # add files
         with self.assertRaises(IntegrityError):
             model.add_files(1, [File(path=None)])  # not nullable
         model.session.rollback()
-        model.add_files(1, [File(path='1'), File(path='2')])
-        model.add_files(2, [File(path='3'), File(path='4')])
+        model.add_files(1, [File(path="1"), File(path="2")])
+        model.add_files(2, [File(path="3"), File(path="4")])
         with self.assertRaises(IntegrityError):
-            model.add_files(1, [File(path='4')])  # files must be unique
+            model.add_files(1, [File(path="4")])  # files must be unique
         model.session.rollback()
         with self.assertRaises(KeyError):
-            model.add_files(3, [File(path='')])  # can't add a file for a dataset that doesn't exist
+            model.add_files(
+                3, [File(path="")]
+            )  # can't add a file for a dataset that doesn't exist
         self.assertTrue(len(model.get_file()) == 4)
         self.assertTrue(len(model.get_file(dataset_id=1)) == 2)
         self.assertTrue(len(model.get_file(dataset_id=2)) == 2)
         self.assertTrue(len(model.get_file(dataset_id=3)) == 0)
         # update via index
         f = model.get_file(3)
-        f[0] = 'update'
+        f[0] = "update"
         model.session.commit()
         f = model.get_file(3)
-        self.assertTrue(f.path == 'update')
+        self.assertTrue(f.path == "update")
         # update errors
         d = model.get_dataset(1)
-        d[0] = 'two'
+        d[0] = "two"
         with self.assertRaises(IntegrityError):  # not unique
             model.session.commit()
         model.session.rollback()
-        d[1] = 'hi'
+        d[1] = "hi"
         with self.assertRaises(StatementError):  # can't assign string to int
             model.session.commit()
         model.session.rollback()

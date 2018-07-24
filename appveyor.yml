@@ -1,10 +1,7 @@
 environment:
   global:
     PYTHON: "C:\\Python36-x64"
-    ARCH: "64"
-
-platform:
-  -x64
+    PLATFORM: x64
 
 install:
   - ps: if ($env:APPVEYOR_PULL_REQUEST_NUMBER -and $env:APPVEYOR_BUILD_NUMBER -ne ((Invoke-RestMethod `
@@ -24,13 +21,14 @@ install:
   # Upgrade to the latest version of pip to avoid it displaying warnings
   # about it being out of date.
   - "python -m pip install --upgrade pip"
-  
-  - "pip install -e .[test]"
+  - "pip install pipenv --upgrade-strategy=only-if-needed"
+  - "pipenv --python=3.6 install --dev ."
 
 build: off
 
 test_script:
-  -  "%PYTHON%\\python.exe -m pytest -v ."
+  -  "pipenv run python setup.py test -v"
+  -  "pipenv run black . --check"
 
 artifacts:
   - path: dist\*

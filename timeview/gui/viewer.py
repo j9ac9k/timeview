@@ -11,13 +11,29 @@ from timeit import default_timer as timer
 
 # 3rd party
 import numpy as np
+
 # TODO remove pyqt5 dependency (see issue #41)
 #  https://github.com/spyder-ide/qtpy/issues/127
 from PyQt5 import QtHelp
 from qtpy import QtGui, QtCore
-from qtpy.QtWidgets import QFileDialog, QMessageBox, QScrollArea, QWidget, QVBoxLayout, QMainWindow, QDesktopWidget,\
-    QAction, QFrame, QTabWidget, QSplitter, QDockWidget, QStyleFactory, QApplication, qApp
-from qtpy.QtCore import Slot, Signal, QDir
+from qtpy.QtWidgets import (
+    QFileDialog,
+    QMessageBox,
+    QScrollArea,
+    QWidget,
+    QVBoxLayout,
+    QMainWindow,
+    QDesktopWidget,
+    QAction,
+    QFrame,
+    QTabWidget,
+    QSplitter,
+    QDockWidget,
+    QStyleFactory,
+    QApplication,
+    qApp,
+)
+from qtpy.QtCore import Slot, Signal
 import pyqtgraph as pg
 
 # QtAwesome may give us difficulty in Windows 10 see:
@@ -33,10 +49,10 @@ from timeview.dsp import processing, tracking
 from timeview.manager.dataset_manager import ManagerWindow
 
 
-CONFIG_PATH = Path(__file__).with_name('config.json')
-ICON_PATH = Path(__file__).with_name('TimeView.icns')
-ICON_COLOR = QtGui.QColor('#00F 897B')
-MENU_ICON_COLOR = QtGui.QColor('#00897B')
+CONFIG_PATH = Path(__file__).with_name("config.json")
+ICON_PATH = Path(__file__).with_name("TimeView.icns")
+ICON_COLOR = QtGui.QColor("#00F 897B")
+MENU_ICON_COLOR = QtGui.QColor("#00897B")
 
 logger = logging.getLogger()
 if __debug__:
@@ -46,53 +62,57 @@ else:
 
 
 class Group(QtCore.QObject):
-    relay = Signal(name='relay')
+    relay = Signal(name="relay")
 
     def __init__(self) -> None:
         super().__init__()
         self.views: List[View] = []
 
     def viewsExcludingSource(self, view_to_exclude):
-        return [view for view in set(self.views)
-                if view is not view_to_exclude]
+        return [view for view in set(self.views) if view is not view_to_exclude]
 
     def join(self, view):
         self.views.append(view)
         self.relay.connect(view.renderer.reload)
         if isinstance(view.renderer, Partition):
-            view.renderer.item.updatePartitionBoundaries.connect(self.updatePartitionBoundaries)
-            view.renderer.item.updatePartitionValuePosition.connect(self.updatePartitionValuePosition)
-            view.renderer.item.updatePartitionPosition.connect(self.updatePartitionPosition)
+            view.renderer.item.updatePartitionBoundaries.connect(
+                self.updatePartitionBoundaries
+            )
+            view.renderer.item.updatePartitionValuePosition.connect(
+                self.updatePartitionValuePosition
+            )
+            view.renderer.item.updatePartitionPosition.connect(
+                self.updatePartitionPosition
+            )
             view.renderer.item.updatePartitionValue.connect(self.updatePartitionValue)
             view.renderer.item.delete_segment.connect(self.removeSegment)
             view.renderer.item.reload.connect(self.relay)
 
-    @Slot(int, float, float, name='updatePartitionBoundaries')
+    @Slot(int, float, float, name="updatePartitionBoundaries")
     def updatePartitionBoundaries(self, index, min_bounds, max_bounds):
         view_to_exclude = self.sender().view
         for view in self.viewsExcludingSource(view_to_exclude):
-            view.renderer.receivePartitionBoundaries(index, min_bounds,
-                                                     max_bounds)
+            view.renderer.receivePartitionBoundaries(index, min_bounds, max_bounds)
 
-    @Slot(int, float, name='updatePartitionValuePosition')
+    @Slot(int, float, name="updatePartitionValuePosition")
     def updatePartitionValuePosition(self, index: int, mid_point: float):
         view_to_exclude = self.sender().view
         for view in self.viewsExcludingSource(view_to_exclude):
             view.renderer.receivePartitionValuePosition(index, mid_point)
 
-    @Slot(int, name='updatePartitionPosition')
+    @Slot(int, name="updatePartitionPosition")
     def updatePartitionPosition(self, index: int):
         view_to_exclude = self.sender().view
         for view in self.viewsExcludingSource(view_to_exclude):
             view.renderer.receivePartitionPosition(index)
 
-    @Slot(int, name='removeSegment')
+    @Slot(int, name="removeSegment")
     def removeSegment(self, index: int):
         view_to_exclude = self.sender().view
         for view in self.viewsExcludingSource(view_to_exclude):
             view.renderer.receiveRemoveSegment(index)
 
-    @Slot(int, name='updatePartitionValue')
+    @Slot(int, name="updatePartitionValue")
     def updatePartitionValue(self, index: int):
         view_to_exclude = self.sender().view
         for view in self.viewsExcludingSource(view_to_exclude):
@@ -100,9 +120,9 @@ class Group(QtCore.QObject):
 
 
 class ScrollArea(QScrollArea):
-    dragEnterSignal = Signal(name='dragEnterSignal')
-    dragLeaveSignal = Signal(name='dragLeaveSignal')
-    dropSignal = Signal(name='dropSignal')
+    dragEnterSignal = Signal(name="dragEnterSignal")
+    dragLeaveSignal = Signal(name="dragLeaveSignal")
+    dropSignal = Signal(name="dropSignal")
 
     def __init__(self, parent, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -129,7 +149,6 @@ class ScrollArea(QScrollArea):
 
 
 class ScrollAreaWidgetContents(QWidget):
-
     def __init__(self, parent, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.setParent(parent)
@@ -152,14 +171,14 @@ class ScrollAreaWidgetContents(QWidget):
 
 
 class Viewer(QMainWindow):
-    queryAxesWidths = Signal(name='queryAxisWidths')
-    queryColWidths = Signal(name='queryColWidths')
-    setAxesWidth = Signal(float, name='setAxesWidth')
-    setSplitter = Signal(list, name='setSplitter')
-    moveSplitterPosition = Signal(name='moveSplitterPosition')
-    setColWidths = Signal(list, name='setColWidths')
-    refresh = Signal(name='refresh')
-    cursorReadoutStatus = Signal(bool, name='cursor_readout_status')
+    queryAxesWidths = Signal(name="queryAxisWidths")
+    queryColWidths = Signal(name="queryColWidths")
+    setAxesWidth = Signal(float, name="setAxesWidth")
+    setSplitter = Signal(list, name="setSplitter")
+    moveSplitterPosition = Signal(name="moveSplitterPosition")
+    setColWidths = Signal(list, name="setColWidths")
+    refresh = Signal(name="refresh")
+    cursorReadoutStatus = Signal(bool, name="cursor_readout_status")
 
     def __init__(self, application):
         super().__init__()
@@ -171,19 +190,19 @@ class Viewer(QMainWindow):
             # this fixes a warning on OSX, but doesn't work at all on windows
             self.setWindowIcon(QtGui.QIcon(str(ICON_PATH)))
         else:
-            logging.warning(f'cannot find icon at {ICON_PATH}')
+            logging.warning(f"cannot find icon at {ICON_PATH}")
         # change this for video capture
         # TODO: introduce demo mode
         self.resize(QDesktopWidget().availableGeometry(self).size() * 0.5)
         self.model: Model = Model()
-        self.processor_action = {QAction(f"{key}", self): processor()
-                                 for key, processor
-                                 in sorted(processing.get_processor_classes()
-                                                     .items())}
+        self.processor_action = {
+            QAction(f"{key}", self): processor()
+            for key, processor in sorted(processing.get_processor_classes().items())
+        }
 
         self.track_menu = None
         self.groups: DefaultDict[int, Group] = defaultdict(Group)
-        self.setWindowTitle('TimeView')
+        self.setWindowTitle("TimeView")
 
         self.scrollArea = ScrollArea(self)
         self.scrollAreaWidgetContents = ScrollAreaWidgetContents(self.scrollArea)
@@ -211,15 +230,15 @@ class Viewer(QMainWindow):
         self.createMenus()
 
         self.statusBar()
-        self.status('Ready')
+        self.status("Ready")
         self.guiAddPanel()
         self.evalTrackMenu()
         # At the moment, it makes no sense to start the application without at
         # least one panel.  In a later version, it may be possible to save/load
         # the entire set of panels and their views to save state.
 
-    @Slot(name='guiAddPanel')
-    def guiAddPanel(self, pos: Optional[int]=None):
+    @Slot(name="guiAddPanel")
+    def guiAddPanel(self, pos: Optional[int] = None):
         """
         when adding a panel through the gui, this method determines
         where the panel should go, and handles the associated frame selection
@@ -244,19 +263,19 @@ class Viewer(QMainWindow):
             menu.setNativeMenuBar(False)
 
         # File menu
-        file_menu = menu.addMenu('&File')
+        file_menu = menu.addMenu("&File")
 
-        exit_action = QAction('&Exit', self)
+        exit_action = QAction("&Exit", self)
         exit_action.triggered.connect(qApp.quit)
         exit_action.setShortcut(QtGui.QKeySequence.Quit)
         exit_action.setMenuRole(QAction.QuitRole)
-        exit_action.setStatusTip('Exit application')
+        exit_action.setStatusTip("Exit application")
         file_menu.addAction(exit_action)
 
         # Track Menu
-        self.track_menu = menu.addMenu('&Track')
+        self.track_menu = menu.addMenu("&Track")
 
-        new_partition_action = QAction('&New Partition', self)
+        new_partition_action = QAction("&New Partition", self)
         new_partition_action.triggered.connect(self.newPartition)
         self.track_menu.addAction(new_partition_action)
 
@@ -284,7 +303,7 @@ class Viewer(QMainWindow):
         self.track_menu.addAction(remove_action)
         self.track_menu.addSeparator()
 
-        info_action = QAction('&Info', self)
+        info_action = QAction("&Info", self)
         info_action.triggered.connect(self.showInfoDialog)
         info_action.setShortcut(QtGui.QKeySequence("Ctrl+I"))
         self.track_menu.addAction(info_action)
@@ -297,16 +316,16 @@ class Viewer(QMainWindow):
         self.track_menu.addAction(options_action)
 
         # Panel Menu
-        panel_menu = menu.addMenu('&Panel')
-        add_action = QAction('&New Panel', self)
+        panel_menu = menu.addMenu("&Panel")
+        add_action = QAction("&New Panel", self)
         add_action.triggered.connect(self.guiAddPanel)
         add_action.setShortcut(QtGui.QKeySequence.New)
-        add_action.setStatusTip('Add Panel')
+        add_action.setStatusTip("Add Panel")
         panel_menu.addAction(add_action)
         remove_action = QAction("&Close Panel", self)
         remove_action.triggered.connect(self.delItem)
         remove_action.setShortcut(QtGui.QKeySequence.Close)
-        remove_action.setStatusTip('remove panel')
+        remove_action.setStatusTip("remove panel")
         panel_menu.addAction(remove_action)
 
         panel_menu.addSeparator()
@@ -321,46 +340,52 @@ class Viewer(QMainWindow):
         panel_menu.addAction(move_panel_down)
 
         panel_menu.addSeparator()
-        increase_size_action = QAction('&Increase Height', self)
+        increase_size_action = QAction("&Increase Height", self)
         increase_size_action.triggered.connect(self.increaseSize)
-        increase_size_action.setShortcuts([QtGui.QKeySequence.ZoomIn,
-                                           QtGui.QKeySequence("Ctrl+=")])
-        increase_size_action.setStatusTip("Increase the vertical size of the "
-                                          "currently selected display panel")
+        increase_size_action.setShortcuts(
+            [QtGui.QKeySequence.ZoomIn, QtGui.QKeySequence("Ctrl+=")]
+        )
+        increase_size_action.setStatusTip(
+            "Increase the vertical size of the " "currently selected display panel"
+        )
         panel_menu.addAction(increase_size_action)
 
-        decrease_size_action = QAction('&Decrease Height', self)
+        decrease_size_action = QAction("&Decrease Height", self)
         decrease_size_action.triggered.connect(self.decreaseSize)
         decrease_size_action.setShortcut(QtGui.QKeySequence.ZoomOut)
-        decrease_size_action.setStatusTip("Decrease the vertical size of the "
-                                          "currently selected display panel")
+        decrease_size_action.setStatusTip(
+            "Decrease the vertical size of the " "currently selected display panel"
+        )
         panel_menu.addAction(decrease_size_action)
         panel_menu.addSeparator()
 
-        hide_cursor_info_action = QAction('Show Cursor', self)
+        hide_cursor_info_action = QAction("Show Cursor", self)
         hide_cursor_info_action.triggered.connect(self.toggleCursorReadout)
         hide_cursor_info_action.setCheckable(True)
         hide_cursor_info_action.setChecked(self.cursor_readout)
-        hide_cursor_info_action.setStatusTip('Toggle the display of the '
-                                             'readout of the cursor position '
-                                             'in the plot area')
+        hide_cursor_info_action.setStatusTip(
+            "Toggle the display of the "
+            "readout of the cursor position "
+            "in the plot area"
+        )
         panel_menu.addAction(hide_cursor_info_action)
 
         toggle_xaxis_label_action = QAction("Show X-Axis Label", self)
         toggle_xaxis_label_action.triggered.connect(self.toggleXAxis)
         toggle_xaxis_label_action.setCheckable(True)
-        toggle_xaxis_label_action.setChecked(self.application
-                                                 .config['show_x-axis_label'])
+        toggle_xaxis_label_action.setChecked(
+            self.application.config["show_x-axis_label"]
+        )
         panel_menu.addAction(toggle_xaxis_label_action)
 
-        synchronize_action = QAction('Synchronize', self)
+        synchronize_action = QAction("Synchronize", self)
         synchronize_action.triggered.connect(self.changeSync)
         synchronize_action.setCheckable(True)
         synchronize_action.setChecked(self.synchronized)
         panel_menu.addAction(synchronize_action)
 
         # Navigation Menu
-        navigation = menu.addMenu('&Navigation')
+        navigation = menu.addMenu("&Navigation")
         # these changes applies to current panel
         # (and thus globally if synchronization is on)
         shift_left_action = QAction("Move &Left", self)
@@ -396,8 +421,7 @@ class Viewer(QMainWindow):
         navigation.addAction(zoom_out_action)
 
         zoom_to_match_action = QAction("Zoom to &1:1", self)
-        zoom_to_match_action.setShortcut(QtGui.QKeySequence
-                                         .MoveToStartOfDocument)
+        zoom_to_match_action.setShortcut(QtGui.QKeySequence.MoveToStartOfDocument)
         zoom_to_match_action.triggered.connect(self.zoomToMatch)
         navigation.addAction(zoom_to_match_action)
 
@@ -407,24 +431,24 @@ class Viewer(QMainWindow):
         navigation.addAction(zoom_fit_action)
 
         # processing Menu
-        processing_menu = menu.addMenu('&Processing')
-        for processor_action, processor in self.processor_action.items():
+        processing_menu = menu.addMenu("&Processing")
+        for processor_action, _ in self.processor_action.items():
             processor_action.triggered.connect(self.showProcessorDialog)
             processor_action.setEnabled(False)
             processing_menu.addAction(processor_action)
 
         # Window Menu
-        window_menu = menu.addMenu('&Window')
-        manager_action = QAction('&Dataset Manager', self)
+        window_menu = menu.addMenu("&Window")
+        manager_action = QAction("&Dataset Manager", self)
         manager_action.triggered.connect(self.manager.show)
         window_menu.addAction(manager_action)
 
         # Help Menu
-        help_menu = menu.addMenu('&Help')
+        help_menu = menu.addMenu("&Help")
         help_action = QAction("&TimeView Help", self)
         help_action.setShortcut(QtGui.QKeySequence.HelpContents)
         help_action.triggered.connect(self.help_window.show)
-        help_action.setStatusTip('show help')
+        help_action.setStatusTip("show help")
         help_menu.addAction(help_action)
         about_action = QAction("&About", self)
         about_action.triggered.connect(self.showAbout)
@@ -434,11 +458,13 @@ class Viewer(QMainWindow):
     def resetEnabledProcessors(self):
         for action, processor in self.processor_action.items():
             action.setEnabled(False)
-            for track_name, track_type in processor.acquire.items():
-                tracks = [view.track
-                          for panel in self.model.panels
-                          for view in panel.views
-                          if isinstance(view.track, track_type)]
+            for _, track_type in processor.acquire._field_types.items():
+                tracks = [
+                    view.track
+                    for panel in self.model.panels
+                    for view in panel.views
+                    if isinstance(view.track, track_type)
+                ]
                 if not tracks:
                     break
             else:
@@ -449,14 +475,20 @@ class Viewer(QMainWindow):
         self.cursorReadoutStatus.emit(self.cursor_readout)
 
     def newPartition(self):
-        new_track = tracking.Partition(np.array([0., 48000.]).astype(tracking.TIME_TYPE),
-                                       np.array(['']).astype('U32'),
-                                       48000)
-        self.selectedDisplayPanel.createViewWithTrack(new_track,
-                                                      renderer='Partition (editable)')
+        new_track = tracking.Partition(
+            np.array([0., 48000.]).astype(tracking.TIME_TYPE),
+            np.array([""]).astype("U32"),
+            48000,
+        )
+        self.selectedDisplayPanel.createViewWithTrack(
+            new_track, renderer="Partition (editable)"
+        )
 
     def getSelectedDisplayPanel(self) -> DisplayPanel:
-        selected_index = self.model.panels.index(self.model.selected_panel)
+        if self.model.selected_panel is not None:
+            selected_index = self.model.panels.index(self.model.selected_panel)
+        else:
+            selected_index = 0
         return self.frames[selected_index].displayPanel
 
     selectedDisplayPanel = property(getSelectedDisplayPanel)
@@ -487,7 +519,7 @@ class Viewer(QMainWindow):
 
     # TODO: when shifting by menu / keys, implement a *target* system,
     # where we are smoothly and exponentially scrolling to the desired target
-    @Slot(name='pageRight')
+    @Slot(name="pageRight")
     def pageRight(self):
         span = np.diff(self.viewRange())[0]
         self.translateBy(span)
@@ -515,8 +547,7 @@ class Viewer(QMainWindow):
         self.applySync()
         center = view.renderer.vb.targetRect().center()
         padding = view.renderer.vb.suggestPadding(pg.ViewBox.XAxis)
-        proposed_ranges = [dim * mag_x
-                           for dim in view.renderer.vb.viewRange()[0]]
+        proposed_ranges = [dim * mag_x for dim in view.renderer.vb.viewRange()[0]]
         if proposed_ranges[0] < -padding:
             shift_right = abs(proposed_ranges[0]) - padding
             center.setX(center.x() + shift_right)
@@ -524,31 +555,35 @@ class Viewer(QMainWindow):
         self.selectedDisplayPanel.pw.alignViews()
         if self.synchronized:
             reference_view_range = self.reference_plot.viewRange()[0]
-            assert all([reference_view_range == frame.displayPanel
-                                                     .pw.main_vb
-                                                     .viewRange()[0]
-                        for frame in self.frames])
+            assert all(
+                [
+                    reference_view_range == frame.displayPanel.pw.main_vb.viewRange()[0]
+                    for frame in self.frames
+                ]
+            )
 
     def getSelectedPanel(self) -> Panel:
-        return self.model.selected_panel
+        selected_panel = self.model.selected_panel
+        assert selected_panel is not None
+        return selected_panel
 
     def setSelectedPanel(self, panel: Panel):
         self.model.set_selected_panel(panel)
 
     selectedPanel = property(getSelectedPanel, setSelectedPanel)
 
-    @Slot(name='pageLeft')
+    @Slot(name="pageLeft")
     def pageLeft(self):
         span = np.diff(self.viewRange())[0]
         self.translateBy(-span)
 
-    @Slot(name='shiftRight')
+    @Slot(name="shiftRight")
     def shiftRight(self):
         span = np.diff(self.viewRange())[0]
         shift = span / 10
         self.translateBy(shift)
 
-    @Slot(name='shiftLeft')
+    @Slot(name="shiftLeft")
     def shiftLeft(self):
         vb = self.selectedPanel.selected_view.renderer.vb
         x_min, x_max = vb.viewRange()[0]
@@ -561,13 +596,13 @@ class Viewer(QMainWindow):
             shift = max(x_min, padding)
         self.translateBy(-shift)
 
-    @Slot(name='goToBeginning')
+    @Slot(name="goToBeginning")
     def goToBeginning(self):
         x_min, x_max = self.viewRange()
         padding = self.selectedPanel.selected_view.renderer.vb.suggestPadding(1)
         self.translateBy(-x_min - padding)
 
-    @Slot(name='goToEnd')
+    @Slot(name="goToEnd")
     def goToEnd(self):
         x_min, x_max = self.viewRange()
         view = self.selectedView
@@ -576,7 +611,7 @@ class Viewer(QMainWindow):
         end_time = view.track.duration / view.track.fs
         self.translateBy(end_time - x_max)
 
-    @Slot(name='zoomFit')
+    @Slot(name="zoomFit")
     def zoomFit(self):
         view = self.selectedView
         if view is None:
@@ -587,7 +622,7 @@ class Viewer(QMainWindow):
         self.scaleBy(max_t / span)
         self.goToBeginning()
 
-    @Slot(name='zoomToMatch')
+    @Slot(name="zoomToMatch")
     def zoomToMatch(self):
         """
         where each pixel represents exactly one sample at the
@@ -604,14 +639,14 @@ class Viewer(QMainWindow):
         mag = mag_span / span
         self.scaleBy(mag)
 
-    @Slot(name='zoomIn')
+    @Slot(name="zoomIn")
     def zoomIn(self):
         view = self.selectedPanel.selected_view
         if view is None:
             return
         vb = view.renderer.vb
         x_range = np.diff(vb.viewRange()[0])
-        minXRange = vb.getState()['limits']['xRange'][0]
+        minXRange = vb.getState()["limits"]["xRange"][0]
         zoom = 0.9
         if minXRange / x_range < zoom:
             pass
@@ -621,35 +656,35 @@ class Viewer(QMainWindow):
             return
         self.scaleBy(zoom)
 
-    @Slot(name='zoomOut')
+    @Slot(name="zoomOut")
     def zoomOut(self):
         self.scaleBy(1.1)
 
-    @Slot(name='increaseSize')
+    @Slot(name="increaseSize")
     def increaseSize(self):
         self.selected_frame.increaseSize()
 
-    @Slot(name='decreaseSize')
+    @Slot(name="decreaseSize")
     def decreaseSize(self):
         self.selected_frame.decreaseSize()
 
-    @Slot(name='showInfoDialog')
+    @Slot(name="showInfoDialog")
     def showInfoDialog(self):
         info_dialog = InfoDialog(str(self.selectedTrack))
         info_dialog.exec_()
 
-    @Slot(name='showProcessorDialog')
+    @Slot(name="showProcessorDialog")
     def showProcessorDialog(self):
         processor = self.processor_action[self.sender()]
         processing_dialog = ProcessingDialog(self, processor)
         processing_dialog.show()
 
-    @Slot(tuple, name='finishedProcessing')
+    @Slot(tuple, name="finishedProcessing")
     def insert_processed_tracks(self, new_tracks: List[processing.Tracks]):
         for new_track in new_tracks:
             self.getSelectedDisplayPanel().createViewWithTrack(new_track)
 
-    def status(self, msg: str, timeout: int=3000):
+    def status(self, msg: str, timeout: int = 3000):
         self.statusBar().showMessage(msg, timeout)
 
     def joinGroup(self, view: View):
@@ -676,22 +711,25 @@ class Viewer(QMainWindow):
                 continue
             frame.displayPanel.pw.main_vb.setXLink(self.reference_plot)
             if frame.displayPanel.panel.selected_view:
-                frame.displayPanel.panel.selected_view.renderer.vb.setXRange(x_min,
-                                                                             x_max,
-                                                                             padding=0)
+                frame.displayPanel.panel.selected_view.renderer.vb.setXRange(
+                    x_min, x_max, padding=0
+                )
 
     def desynchronize(self):
         self.reference_plot = None
         for frame in self.frames:
-            frame.displayPanel.pw.main_vb.setXLink(frame.displayPanel
-                                                        .pw.main_vb)
+            frame.displayPanel.pw.main_vb.setXLink(frame.displayPanel.pw.main_vb)
 
     def toggleXAxis(self):
-        self.application.config['show_x-axis_label'] = not self.application.config['show_x-axis_label']
+        self.application.config["show_x-axis_label"] = not self.application.config[
+            "show_x-axis_label"
+        ]
         for frame in self.frames:
-            frame.displayPanel.pw.axis_bottom.showLabel(self.application.config['show_x-axis_label'])
+            frame.displayPanel.pw.axis_bottom.showLabel(
+                self.application.config["show_x-axis_label"]
+            )
 
-    def createNewPanel(self, pos: Optional[int]=None):
+    def createNewPanel(self, pos: Optional[int] = None):
         frame = Frame(main_window=self)
         w = DisplayPanel(frame=frame)
         w.pw.setAxesWidths(self.axis_width)
@@ -719,7 +757,7 @@ class Viewer(QMainWindow):
 
     def delItem(self):
         if self.selected_frame is None:
-            logging.debug('no frame is selected for debug')
+            logging.debug("no frame is selected for debug")
             return
         remove_index = self.frames.index(self.selected_frame)
         self.model.remove_panel(remove_index)
@@ -735,13 +773,14 @@ class Viewer(QMainWindow):
             self.selectFrame(self.frames[remove_index])
         self.applySync()
 
-    @Slot(int, name='viewMoved')
+    @Slot(int, name="viewMoved")
     def viewMoved(self, panel_index: int):
         view_to_add = self.model.panels[panel_index].views[-1]
-        self.frames[panel_index].displayPanel.view_table.addView(view_to_add,
-                                                                 setColor=False)
+        self.frames[panel_index].displayPanel.view_table.addView(
+            view_to_add, setColor=False
+        )
 
-    def addFrame(self, frame: Frame, index: Optional[int]=None):
+    def addFrame(self, frame: Frame, index: Optional[int] = None):
         if not index:
             index = len(self.frames)
         self.frames.insert(index, frame)
@@ -764,12 +803,17 @@ class Viewer(QMainWindow):
 
     def swapFrames(self, positions: Tuple[int, int]):
         self.scrollAreaWidgetContents.swapWidgets(positions)
-        self.frames[positions[0]], self.frames[positions[1]] = self.frames[positions[1]], self.frames[positions[0]]
-        self.model.panels[positions[0]], self.model.panels[positions[1]] =\
-            self.model.panels[positions[1]], self.model.panels[positions[0]]
+        self.frames[positions[0]], self.frames[positions[1]] = (
+            self.frames[positions[1]],
+            self.frames[positions[0]],
+        )
+        self.model.panels[positions[0]], self.model.panels[positions[1]] = (
+            self.model.panels[positions[1]],
+            self.model.panels[positions[0]],
+        )
         self.updateFrames()
 
-    @Slot(list, name='determineColumnWidths')
+    @Slot(list, name="determineColumnWidths")
     def determineColumnWidths(self, widths: List[int]):
         if not self.all_column_widths:
             self.all_column_widths = [{self.sender(): width} for width in widths]
@@ -777,25 +821,27 @@ class Viewer(QMainWindow):
             for index, width in enumerate(widths):
                 self.all_column_widths[index][self.sender()] = width
 
-        self.column_width_hint = [max(column.values()) for column in self.all_column_widths]
+        self.column_width_hint = [
+            max(column.values()) for column in self.all_column_widths
+        ]
         self.setColWidths.emit(self.column_width_hint)
         self.moveSplitterPosition.emit()
 
-    @Slot(name='moveUp')
+    @Slot(name="moveUp")
     def moveUp(self):
         index = self.frames.index(self.selected_frame)
         if index == 0:
             return
         self.swapFrames((index, index - 1))
 
-    @Slot(name='moveDown')
+    @Slot(name="moveDown")
     def moveDown(self):
         index = self.frames.index(self.selected_frame)
         if index == len(self.frames) - 1:
             return
         self.swapFrames((index, index + 1))
 
-    @Slot(name='selectNext')
+    @Slot(name="selectNext")
     def selectNext(self):
         index = self.frames.index(self.selected_frame)
         if index == len(self.frames) - 1:
@@ -803,7 +849,7 @@ class Viewer(QMainWindow):
         else:
             self.selectFrame(self.frames[index + 1])
 
-    @Slot(name='selectPrevious')
+    @Slot(name="selectPrevious")
     def selectPrevious(self):
         index = self.frames.index(self.selected_frame)
         if index == 0:
@@ -811,7 +857,7 @@ class Viewer(QMainWindow):
         else:
             self.selectFrame(self.frames[index - 1])
 
-    @Slot(QFrame, name='selectFrame')
+    @Slot(QFrame, name="selectFrame")
     def selectFrame(self, frame_to_select: Frame):
         assert isinstance(frame_to_select, Frame)
         assert frame_to_select in self.frames
@@ -819,11 +865,13 @@ class Viewer(QMainWindow):
             self.selected_frame.resetStyle()
         self.selected_frame = frame_to_select
         self.selected_frame.setFocus(QtCore.Qt.ShortcutFocusReason)
-        self.selected_frame.setStyleSheet("""
+        self.selected_frame.setStyleSheet(
+            """
         Frame {
             border: 3px solid red;
         }
-        """)
+        """
+        )
         index = self.frames.index(self.selected_frame)
         self.model.set_selected_panel(self.model.panels[index])
         if self.synchronized and self.reference_plot is None:
@@ -833,11 +881,11 @@ class Viewer(QMainWindow):
         selected_panel_index = self.model.panels.index(self.selectedPanel)
         assert selected_frame_index == selected_panel_index
 
-    @Slot(QFrame, name='frameToMove')
+    @Slot(QFrame, name="frameToMove")
     def frameToMove(self, frame_to_move: Frame):
         self.from_index = self.frames.index(frame_to_move)
 
-    @Slot(QFrame, name='whereToInsert')
+    @Slot(QFrame, name="whereToInsert")
     def whereToInsert(self, insert_here: Frame):
         self.to_index = self.frames.index(insert_here)
         if self.to_index == self.from_index:
@@ -847,30 +895,31 @@ class Viewer(QMainWindow):
 
     def moveFrame(self):
         if self.to_index is None or self.from_index is None:
-            logging.debug('To and/or From index not set properly')
+            logging.debug("To and/or From index not set properly")
             return
         frame = self.frames[self.from_index]
         self.scrollAreaWidgetContents.layout.removeWidget(frame)
         self.frames.insert(self.to_index, self.frames.pop(self.from_index))
         self.model.move_panel(self.to_index, self.from_index)
-        self.scrollAreaWidgetContents.layout.insertWidget(self.to_index,
-                                                          frame)
+        self.scrollAreaWidgetContents.layout.insertWidget(self.to_index, frame)
         self.selectFrame(self.frames[self.to_index])
         self.updateFrames()
         # Resetting moving parameters
         self.from_index = self.to_index = None
 
-    @Slot(name='moveToEnd')
+    @Slot(name="moveToEnd")
     def moveToEnd(self):
         self.frameToMove(self.selected_frame)
         self.to_index = len(self.frames) - 1
         self.moveFrame()
 
-    @Slot(name='checkAxesWidths')
+    @Slot(name="checkAxesWidths")
     def checkAxesWidths(self):
-        widths = [axis.preferredWidth()
-                  for frame in self.frames
-                  for axis in frame.displayPanel.pw.axes.values()]
+        widths = [
+            axis.preferredWidth()
+            for frame in self.frames
+            for axis in frame.displayPanel.pw.axes.values()
+        ]
         if not widths:
             return
         axis_width = max(widths)
@@ -885,7 +934,7 @@ class Viewer(QMainWindow):
 
     def createHelpWindow(self) -> QDockWidget:
         # http://www.walletfox.com/course/qhelpengineexample.php
-        help_path = (Path(__file__).parent / 'TimeView.qhc').resolve()
+        help_path = (Path(__file__).parent / "TimeView.qhc").resolve()
         assert help_path.exists()
         help_engine = QtHelp.QHelpEngine(str(help_path))
         help_engine.setupData()
@@ -899,71 +948,82 @@ class Viewer(QMainWindow):
         url = "qthelp://org.sphinx.timeview.1.0/doc/index.html"
         text_viewer.setSource(QtCore.QUrl(url))
 
-        help_engine.contentWidget().linkActivated['QUrl'].connect(text_viewer.setSource)
-        help_engine.indexWidget().linkActivated['QUrl', str].connect(text_viewer.setSource)
+        help_engine.contentWidget().linkActivated["QUrl"].connect(text_viewer.setSource)
+        help_engine.indexWidget().linkActivated["QUrl", str].connect(
+            text_viewer.setSource
+        )
 
         horiz_splitter = QSplitter(QtCore.Qt.Horizontal)
         horiz_splitter.insertWidget(0, tab_widget)
         horiz_splitter.insertWidget(1, text_viewer)
 
-        help_window = QDockWidget('Help', self)
+        help_window = QDockWidget("Help", self)
         help_window.setWidget(horiz_splitter)
         help_window.hide()
         self.addDockWidget(QtCore.Qt.BottomDockWidgetArea, help_window)
         return help_window
 
-    @Slot(name='guiAddView')
-    def guiAddView(self,
-                   file_names: Optional[Union[str, Path, List[str], List[Path]]]=None,
-                   renderer: Optional[str]=None,
-                   **kwargs):
+    @Slot(name="guiAddView")
+    def guiAddView(
+        self,
+        file_names: Optional[Union[str, Path, List[str], List[Path]]] = None,
+        renderer: Optional[str] = None,
+        **kwargs,
+    ):
         if file_names is None:
-            file_names, _ = QFileDialog.getOpenFileNames(self,
-                                                         "Add Track to Panel",
-                                                         str(self.application.config['working_directory']),
-                                                         "Track and EDF Files (*.wav *.lab *.tmv *.edf);;\
+            file_names, _ = QFileDialog.getOpenFileNames(
+                self,
+                "Add Track to Panel",
+                str(self.application.config["working_directory"]),
+                "Track and EDF Files (*.wav *.lab *.tmv *.edf);;\
                                                          All Files (*)",
-                                                         options=QFileDialog.Options())
+                options=QFileDialog.Options(),
+            )
         if isinstance(file_names, List):
             if len(file_names):
                 for f in file_names:
                     self.application.add_view_from_file(Path(f))
-                self.application.config['working_directory'] = str(Path(file_names[-1]).parent)
+                self.application.config["working_directory"] = str(
+                    Path(file_names[-1]).parent
+                )
         else:
             raise IOError
 
-    @Slot(name='guiSaveView')
+    @Slot(name="guiSaveView")
     def guiSaveView(self):
         """identifies the selected view and removes it"""
         view = self.selectedView
         if view is None:
             return
         track = view.track
-        file_name, _ = \
-            QFileDialog.getSaveFileName(self,
-                                        "Save Track",
-                                        str(Path(self.application.config['working_directory'] / track.path.name)),
-                                        f"Files (*{track.default_suffix})",
-                                        options=QFileDialog.Options())
+        file_name, _ = QFileDialog.getSaveFileName(
+            self,
+            "Save Track",
+            str(Path(self.application.config["working_directory"] / track.path.name)),
+            f"Files (*{track.default_suffix})",
+            options=QFileDialog.Options(),
+        )
         if file_name:
             track.write(file_name)
             track.path = Path(file_name)
             # TODO: update view table to show you name
-            self.application.config['working_directory'] = str(Path(file_name).parent)
+            self.application.config["working_directory"] = str(Path(file_name).parent)
 
-    @Slot(name='guiRevertView')
+    @Slot(name="guiRevertView")
     def guiRevertView(self):
         """identifies the selected view and reverts to contents on disk"""
         view = self.selectedView
         if view is None:
             return
-        reply = QMessageBox.question(self,
-                                     'Message',
-                                     'Are you sure you want to revert to the'
-                                     'contents on disk? All changes since '
-                                     'loading will be lost',
-                                     QMessageBox.Yes,
-                                     QMessageBox.Cancel)
+        reply = QMessageBox.question(
+            self,
+            "Message",
+            "Are you sure you want to revert to the"
+            "contents on disk? All changes since "
+            "loading will be lost",
+            QMessageBox.Yes,
+            QMessageBox.Cancel,
+        )
         if reply == QMessageBox.Yes:
             view.track = view.track.read(view.track.path)
             new_track = view.track.read(view.track.path)
@@ -972,7 +1032,7 @@ class Viewer(QMainWindow):
             view.renderer.track = new_track
             view.renderer.reload()
 
-    @Slot(name='guiDelView')
+    @Slot(name="guiDelView")
     def guiDelView(self):
         """identifies the selected view and removes it"""
         if self.selectedView is None:
@@ -985,7 +1045,7 @@ class Viewer(QMainWindow):
     def showRenderDialog(self):
         renderer = self.selectedView.renderer
         if not renderer.parameters:
-            logger.info('No parameters to modify for given renderer')
+            logger.info("No parameters to modify for given renderer")
             return
         render_dialog = RenderDialog(self, renderer)
         render_dialog.exec_()
@@ -996,8 +1056,7 @@ class Viewer(QMainWindow):
         # TODO: hate this...
         ignore_actions = ["New Partition", "Open"]
         for action in self.track_menu.actions():
-            if any([ignore_str in action.text()
-                    for ignore_str in ignore_actions]):
+            if any([ignore_str in action.text() for ignore_str in ignore_actions]):
                 continue
             else:
                 action.setEnabled(enabled)
@@ -1009,28 +1068,30 @@ class Viewer(QMainWindow):
 class TimeView:
     def __init__(self):
         start = timer()
-        sys.argv[0] = 'TimeView'  # to override Application menu on OSX
+        sys.argv[0] = "TimeView"  # to override Application menu on OSX
         QtCore.qInstallMessageHandler(self._log_handler)
         QApplication.setDesktopSettingsAware(False)
         self.qtapp = qtapp = QApplication(sys.argv)
         qtapp.setStyle("fusion")
         qtapp.setApplicationName("TimeView")
         qtapp.setAttribute(QtCore.Qt.AA_EnableHighDpiScaling)
-        if hasattr(QStyleFactory, 'AA_UseHighDpiPixmaps'):
+        if hasattr(QStyleFactory, "AA_UseHighDpiPixmaps"):
             qtapp.setAttribute(QtCore.Qt.AA_UseHighDpiPixmaps)
 
         self.config = {
-            'working_directory': str(Path.home()),
-            'panel_height': 300,
-            'show_x-axis_label': True
-            }
+            "working_directory": str(Path.home()),
+            "panel_height": 300,
+            "show_x-axis_label": True,
+        }
         try:
             with open(CONFIG_PATH) as file:
                 self.config.update(json.load(file))
         except IOError:
-            logging.debug('cannot find saved configuration, using default configuration')
+            logging.debug(
+                "cannot find saved configuration, using default configuration"
+            )
         except JSONDecodeError:
-            logging.debug('invalid json file')
+            logging.debug("invalid json file")
 
         self.viewer = Viewer(self)
         # audio player here?
@@ -1039,15 +1100,15 @@ class TimeView:
             sys.excepthook = self._excepthook
 
         finish = timer()
-        logging.debug(f'complete startup time is {finish-start:{0}.{3}}'
-                      'seconds')
+        logging.debug(f"complete startup time is {finish-start:{0}.{3}}" "seconds")
 
     @staticmethod
     def _log_handler(msg_type, msg_log_context, msg_string) -> None:
         if msg_type == 1:
-            if re.match("QGridLayoutEngine::addItem: Cell \\(\\d+, \\d+\\) "
-                        "already taken",
-                        msg_string):
+            if re.match(
+                "QGridLayoutEngine::addItem: Cell \\(\\d+, \\d+\\) " "already taken",
+                msg_string,
+            ):
                 return None
             logger.warning(msg_string)
         elif msg_type == 2:
@@ -1059,15 +1120,17 @@ class TimeView:
         elif msg_type == 0:
             logger.debug(msg_string)
         else:
-            logger.warning('received unknown message type from qt system '
-                           f'with contents {msg_string}')
+            logger.warning(
+                "received unknown message type from qt system "
+                f"with contents {msg_string}"
+            )
 
     def _excepthook(self, exc_type, exc_value, exc_traceback):
-        logging.exception('Uncaught Exception',
-                          exc_info=(exc_type,
-                                    exc_value,
-                                    exc_traceback))
+        logging.exception(
+            "Uncaught Exception", exc_info=(exc_type, exc_value, exc_traceback)
+        )
         from .dialogs import Bug
+
         bug_box = Bug(self.qtapp, exc_type, exc_value, exc_traceback)
         bug_box.exec_()
 
@@ -1076,44 +1139,47 @@ class TimeView:
         self._exit(self.qtapp.exec_())
 
     def _exit(self, status):
-        with open(CONFIG_PATH, 'w') as file:
+        with open(CONFIG_PATH, "w") as file:
             json.dump(self.config, file)
         del self.viewer
         del self.qtapp
         sys.exit(status)
 
-    def add_view(self,
-                 track_obj: tracking.Track,
-                 panel_index: Optional[int]=None,
-                 renderer_name: Optional[str]=None,
-                 *args,
-                 **kwargs):
+    def add_view(
+        self,
+        track_obj: tracking.Track,
+        panel_index: Optional[int] = None,
+        renderer_name: Optional[str] = None,
+        *args,
+        **kwargs,
+    ):
         if isinstance(panel_index, int) and panel_index >= len(self.viewer.frames):
             for pos in range(len(self.viewer.frames), panel_index + 1):
                 self.viewer.guiAddPanel()
                 self.viewer.selectFrame(self.viewer.frames[pos])
-        self.viewer.selectedDisplayPanel.createViewWithTrack(track_obj,
-                                                             renderer_name,
-                                                             **kwargs)
+        self.viewer.selectedDisplayPanel.createViewWithTrack(
+            track_obj, renderer_name, **kwargs
+        )
 
-    def add_view_from_file(self, file: Path, panel_index: int=None):
-        if file.suffix == '.edf':
+    def add_view_from_file(self, file: Path, panel_index: int = None):
+        if file.suffix == ".edf":
             import pyedflib
+
             with pyedflib.EdfReader(str(file)) as f:
                 labels = f.getSignalLabels()
                 for label in labels:
                     index = labels.index(label)
-                    wav = tracking.Wave(f.readSignal(index),
-                                        f.getSampleFrequency(index))
+                    wav = tracking.Wave(
+                        f.readSignal(index), f.getSampleFrequency(index)
+                    )
                     wav.label = label
-                    wav.path = file.with_name(file.stem + '-' + label + '.wav')
+                    wav.path = file.with_name(file.stem + "-" + label + ".wav")
                     wav.min = f.getPhysicalMinimum(index)
                     wav.max = f.getPhysicalMaximum(index)
                     wav.unit = f.getPhysicalDimension(index)
-                    self.add_view(wav,
-                                  panel_index=panel_index,
-                                  y_min=wav.min,
-                                  y_max=wav.max)
+                    self.add_view(
+                        wav, panel_index=panel_index, y_min=wav.min, y_max=wav.max
+                    )
         else:
             try:
                 track_obj = tracking.Track.read(file)
