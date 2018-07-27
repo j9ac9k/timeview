@@ -12,23 +12,27 @@ pyqtgraph = ">=0.10.0"
 QtPy = ">=1.4.2"
 QtAwesome = ">=0.4.4"
 SQLAlchemy = ">=1.2.9"
-pyEDFlib = ">=0.1.12"
+pyedflib = ">=0.1.13"
 
 [dev-packages]
-pre-commit = "*"
-pytest = ">=3.6.2"
-pytest-qt = ">=2.4.1"
+pre-commit = ">=1.10.4"
+pytest = ">=3.6.3"
+pytest-qt = ">=3.0.0"
 pytest-runner = ">=4.2"
-flake8 = "*"
+flake8 = ">=3.5.0"
 flake8-bugbear = ">=18.2.0"
-flake8-mypy = "*"
+flake8-mypy = ">=17.8.0"
 mypy = ">=0.620"
 readme_renderer = "*"
 recommonmark = "*"
 black = ">=18.6b4"
-setuptools = ">=39.2.0"
+setuptools = ">=40.0.0"
 twine = ">=1.11.0"
 wheel = ">=0.31.1"
+timeview = {editable = true, path = "."}
 
 [requires]
 python_version = "3.6"
+
+[pipenv]
+allow_prereleases = true

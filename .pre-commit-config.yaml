@@ -3,7 +3,6 @@ repos:
     rev: stable
     hooks:
     - id: black
-      language_version: python3.6
 -   repo: https://github.com/pre-commit/mirrors-mypy
     rev: v0.620  # Use the sha / tag you want to point at
     hooks:
@@ -11,5 +10,10 @@ repos:
 -   repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v1.4.0  # Use the ref you want to point at
     hooks:
+    -   id: debug-statements
+    -   id: check-case-conflict
+    -   id: trailing-whitespace
+    -   id: fix-encoding-pragma
+    -   id: end-of-file-fixer
     -   id: flake8
     # -   id: ...
