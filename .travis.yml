@@ -3,11 +3,10 @@ language: python
 env:
   global:
     - PYTHON_VERSION=3.6
-    - MAIN_CMD='python setup.py'
-    - SETUP_CMD='test -v'
+    - TEST_CMD='python -m pytest -vv -s tests'
+    - MAIN_CMD='pipenv run'
     - SETUP_XVFB=true
     - PIPENV_IGNORE_VIRTUALENVS=1
-
 
 matrix:
   include:
@@ -17,16 +16,20 @@ matrix:
       language: generic
 
 install:
+  # CI helpers
   - git clone --depth 1 git://github.com/astropy/ci-helpers.git
   - source ci-helpers/travis/setup_conda.sh
+
+  # Install TimeView
+  - source activate test
   - pip install pipenv --upgrade-strategy=only-if-needed
   - pipenv --python=3.6 install --dev .
 
-script: 
-  - pipenv run python --version 
-  - pipenv run $MAIN_CMD $SETUP_CMD
-  - pipenv run black . --check
-  - pipenv run flake8
+script:
+  - $MAIN_CMD python --version
+  - $MAIN_CMD $TEST_CMD
+  - $MAIN_CMD black . --check
+  - $MAIN_CMD flake8
 
 notifications:
   on_success: change
@@ -40,4 +43,3 @@ skip_commits:
     - .gitignore
     - .travis.yml
     - LICENSE.txt
-

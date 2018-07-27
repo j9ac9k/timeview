@@ -2,6 +2,7 @@ environment:
   global:
     PYTHON: "C:\\Python36-x64"
     PLATFORM: x64
+    PYTEST_QT_API: "pyqt5"
 
 install:
   - ps: if ($env:APPVEYOR_PULL_REQUEST_NUMBER -and $env:APPVEYOR_BUILD_NUMBER -ne ((Invoke-RestMethod `
@@ -17,17 +18,19 @@ install:
   # Check that we have the expected version and architecture for Python
   - "python --version"
   - "python -c \"import struct; print(struct.calcsize('P') * 8)\""
-  
+
   # Upgrade to the latest version of pip to avoid it displaying warnings
   # about it being out of date.
   - "python -m pip install --upgrade pip"
   - "pip install pipenv --upgrade-strategy=only-if-needed"
   - "pipenv --python=3.6 install --dev ."
+  - "pipenv run pip list"
+  - "pipenv run pip install colorama"  # this was apparently missing for some reason
 
-build: off
+build: false
 
 test_script:
-  -  "pipenv run python setup.py test -v"
+  -  "pipenv run python -m pytest -vv -s tests"
   -  "pipenv run black . --check"
 
 artifacts:

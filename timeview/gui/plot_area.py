@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import logging
 from typing import Dict
 from math import ceil
@@ -18,6 +19,8 @@ icon_color = QtGui.QColor("#00897B")
 
 class DumbPlot(pg.GraphicsView):
     maxWidthChanged = Signal(name="maxWidthChanged")
+    finished = Signal(name="finished")
+    error = Signal(name="error")
 
     def __init__(self, display_panel):
         super().__init__()
@@ -156,7 +159,12 @@ class DumbPlot(pg.GraphicsView):
     @Slot(View, name="rendererChanged")
     def rendererChanged(self, view: View):
         self.removeView(view)
-        self.addView(view, forceRangeReset=False)
+        try:
+            self.addView(view, forceRangeReset=False)
+        except rendering.InvalidDataError or rendering.InvalidParameterError:
+            self.error.emit()
+            return None
+        self.finished.emit()
 
     @Slot(View, name="addView")
     def addView(self, view: View, forceRangeReset=None):
