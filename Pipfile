@@ -13,6 +13,7 @@ QtPy = ">=1.4.2"
 QtAwesome = ">=0.4.4"
 SQLAlchemy = ">=1.2.9"
 pyedflib = ">=0.1.13"
+cython = "*"
 
 [dev-packages]
 pre-commit = ">=1.10.4"
@@ -32,7 +33,7 @@ wheel = ">=0.31.1"
 timeview = {editable = true, path = "."}
 
 [requires]
-python_version = "3.6"
+python_version = "3.7"
 
 [pipenv]
 allow_prereleases = true

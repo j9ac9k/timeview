@@ -1,6 +1,6 @@
 environment:
   global:
-    PYTHON: "C:\\Python36-x64"
+    PYTHON: "C:\\Python37-x64"
     PLATFORM: x64
     PYTEST_QT_API: "pyqt5"
 
@@ -23,7 +23,7 @@ install:
   # about it being out of date.
   - "python -m pip install --upgrade pip"
   - "pip install pipenv --upgrade-strategy=only-if-needed"
-  - "pipenv --python=3.6 install --dev ."
+  - "pipenv --python=3.7 install --dev ."
   - "pipenv run pip list"
   - "pipenv run pip install colorama"  # this was apparently missing for some reason
 

@@ -2,7 +2,7 @@ language: python
 
 env:
   global:
-    - PYTHON_VERSION=3.6
+    - PYTHON_VERSION=3.7
     - TEST_CMD='python -m pytest -vv -s tests'
     - MAIN_CMD='pipenv run'
     - SETUP_XVFB=true
@@ -23,7 +23,7 @@ install:
   # Install TimeView
   - source activate test
   - pip install pipenv --upgrade-strategy=only-if-needed
-  - pipenv --python=3.6 install --dev .
+  - pipenv install --dev .
 
 script:
   - $MAIN_CMD python --version

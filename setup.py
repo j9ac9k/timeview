@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from pathlib import Path
 from setuptools import setup
 from typing import Dict
@@ -21,6 +22,7 @@ REQUIRED = [
     "pyqtgraph",
     "qtawesome",
     "pyedflib",
+    "cython",
 ]
 
 TESTS_REQUIRE = ["pytest", "pytest-qt", "pytest-runner"]
