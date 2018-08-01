@@ -1,12 +1,12 @@
 language: generic
 sudo: false
-
 env:
   global:
   - TEST_CMD='python -m pytest -vv -s tests'
   - MAIN_CMD='pipenv run'
   - SETUP_XVFB=true
   - PIPENV_IGNORE_VIRTUALENVS=1
+  - secure: dz0S9m1PyA+Phee3LOHCbU56WHx2fIGg74rEDL7GyOiSUouAxg8o6lqLn3lrd0Xnre/IqiplTGwyshH8gbPlb7w1vzAi962vZwRf3iDaZpIIs8NKZ3FIZohPv7o/uTa9C+Yg97jUQOLJvJUlCReGSflIIC98c8K+axAmhPWgW7nTAAA2Fu9Ux5rrwk1i9HV6LH7gKmAjf8e3+N7mRTXlsh9HRxZFMypcP+pi1N+pKdWtlUaYAl6sTrWETZr1uPJ396OCFC2lIft/mBnNDkmNSkZlLbqbOML24xjeivRuxoYNFogzJar3//QzTI29uZV1rhV8mDuSZMMqXgiDZ8XGnwl3K34PC1NiUxAf+NzX7Sb1I+PL14DNTl5lOYB1p+gAr2Co+k79CI4pjib8zbopjTpv4zuD3mEcathcH7BPfTZe1INu8gXrAZ2Vvg/a9Hd+jK41AcgWYCHI7kUjPrj85Vi+ei7zxdQ1oQhTcszhUgfKOasuF0SfnpAj1CPcIj68C8rvzEWM2GQLYLDPytsV6EFNIDgmXIE7n0CxSexf/uAtPULj8pcPsOWZnUbMxu65wmDB7cTaK+upEVFM69BSZCR02zHzPhaGGTYEcyYvqbJBhJGEBBQ/Zin4XTvdWt8YHKJDfYQYACTFq3Tep5SOXknPVvKkXQgRh5aqDkiPDog=
 matrix:
   fast_finish: true
   include:
@@ -21,9 +21,9 @@ matrix:
     language: generic
     env: PYTHON_VERSION=3.7
 before_install:
-  - git clone --depth 1 git://github.com/astropy/ci-helpers.git
-  - source ci-helpers/travis/setup_conda.sh
-  - source activate test
+- git clone --depth 1 git://github.com/astropy/ci-helpers.git
+- source ci-helpers/travis/setup_conda.sh
+- source activate test
 install:
 - pip install pipenv --upgrade-strategy=only-if-needed
 - pipenv install --dev .
@@ -41,14 +41,14 @@ skip_commits:
   - "**/*.rst"
   - "*.md"
   - ".gitignore"
-  - "appveyor.yml"
+  - appveyor.yml
   - LICENSE.txt
 deploy:
   provider: pypi
   skip_existing: true
   user: j9ac9k
   password:
-    secure: fDObdS1IA4TvprIfjLbc+QZbORgPF1Sk6ML/airCwFZjCiFGjQqXRIVypaVbkspOJtyKcO+nfXCjGWzylsUd0B7qOKQ92v4uBKl0QGVO1P4Yw+ZEKXzJaYJFL/kgTPdyooyMDvJCEMbx2PjQs2g7snMuL29hIv3/qx/I0DbBmm57bewa0+tSECyhn4Y+B/Uub2cG3Lfo2IM00uoqfVeMzTiShCT4iu7vvGSGhxQ4YjzAE7XYFOQyFOTdpLs+ybFgQjWZMSPq0DxSObB8pgPK82+288sxiKBQ3fniIykgTSgFyt0IClSlDfh3fiy4+Xoqj3hTyi1AGS+5F0Jc5XhHLlkY28cUAoFhjdcfhdaou1EmEws+TByKwnH8GvhqqeZPTShGfVXfgolqqw4YrxnlXdtUMKPNpyjUylOB4qtRnR7E1xdBToBU04KdR6aecKWxvEyj/4/pdxpfquwgXkhbYBDQdxy8Gow1TvRADUGYK2Hv1DvX8uBbC4OjyLhMymAj8NpwMDGgEqnSXeTxmrTmw+LBcl0hvIpCU3xtNtoQUMifZknl4Oc8j0UaTp32gkldY0t+ALnHrmHVi3yfyNyCGfCvBDf4NireYoZP3ckjmjefEPZBb4ZSQW04lrxpNaC2tQLqAmNjvfa8+NvaSDMRdF8J0oNz2lyuQ9nBkBO6WZ8=
+    secure: H/Qbmc7CwOtTlbOZhEgbe4GYeURKL31YmPL39t9ttGoN7dVDqGgHrprWmMMhKE1YvfUo7nzQSoyH6nEcsAcuPaQm8Zm7Y/zA1b/W9VGLnijRmB+Jw0hS7vNWVnrdVU1yohml20S9wtbH7354zw2bVEX7oVrO/ATV93FvfEVtWJIeIWE3/hE7zKPbrznbqQmm/MJsFiHMV5wP24kaYSpyNjQtQ4hpCSMldAaPOAtUmNk8+u6vkWQ32k676/OLkZqGziz7Gv/hQgsu3mwNZJj41Yr2NCaftpbOA0F6Eiks6jUTD39qBfCL+MsJod+Po2vEXh9+S0A7IP5FSFLY3zgzvqdJEwsHOqC7A7pdyBQAhKxlBrcEVhm0f1PTbKSQfzvMHMhLQs5VeZsYoK9KspBd3e+LZHa/l6lZqyy1vQ3ND7iuYUaKaKWR4wG1lAbT20HyQ2ch6CaM6G+YT2ntBzyZmaGPWjDGXuh9KgWTG0VXBUQS1eJcGhtJZBlyOJYUyelQO1qiW993rvkWVtfiIf+Te/SzC/W5g0/Q+XPb115Q/aQ/qxwKBk5Pes9cKLCEd/7VbG+zbklrG0J+EhabGGXHFXMPznkC/WBsfwE5LH4SjNQyBn/slspTqWgOC/zvx0483oxFwTr+KXNS8VvTzJDdMD31yuVYuqQsT4Dgec46t6k=
   distributions: sdist bdist_wheel
   on:
     tags: true
