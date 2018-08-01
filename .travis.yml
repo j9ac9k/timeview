@@ -42,6 +42,7 @@ skip_commits:
   - ".gitignore"
   - appveyor.yml
   - LICENSE.txt
+
 deploy:
   provider: pypi
   skip_existing: true
