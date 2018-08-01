@@ -64,6 +64,7 @@ setup(
     classifiers=[
         "Development Status :: 3 - Alpha",
         "Programming Language :: Python :: 3.6",
+        "Programming Language :: Python :: 3.7",
         "Topic :: Scientific/Engineering",
         "Topic :: Multimedia :: Sound/Audio :: Analysis",
         "Topic :: Utilities",
