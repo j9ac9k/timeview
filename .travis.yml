@@ -1,45 +1,54 @@
-language: python
+language: generic
+sudo: false
 
 env:
   global:
-    - PYTHON_VERSION=3.7
-    - TEST_CMD='python -m pytest -vv -s tests'
-    - MAIN_CMD='pipenv run'
-    - SETUP_XVFB=true
-    - PIPENV_IGNORE_VIRTUALENVS=1
-
+  - TEST_CMD='python -m pytest -vv -s tests'
+  - MAIN_CMD='pipenv run'
+  - SETUP_XVFB=true
+  - PIPENV_IGNORE_VIRTUALENVS=1
 matrix:
+  fast_finish: true
   include:
-    - os: linux
-      sudo: false
-    - os: osx
-      language: generic
-
-install:
-  # CI helpers
+  - os: linux
+    env: PYTHON_VERSION=3.6
+  - os: linux
+    env: PYTHON_VERSION=3.7
+  - os: osx
+    language: generic
+    env: PYTHON_VERSION=3.6
+  - os: osx
+    language: generic
+    env: PYTHON_VERSION=3.7
+before_install:
   - git clone --depth 1 git://github.com/astropy/ci-helpers.git
   - source ci-helpers/travis/setup_conda.sh
-
-  # Install TimeView
   - source activate test
-  - pip install pipenv --upgrade-strategy=only-if-needed
-  - pipenv install --dev .
-
+install:
+- pip install pipenv --upgrade-strategy=only-if-needed
+- pipenv install --dev .
 script:
-  - $MAIN_CMD python --version
-  - $MAIN_CMD $TEST_CMD
-  - $MAIN_CMD black . --check
-  - $MAIN_CMD flake8
-
+- "$MAIN_CMD python --version"
+- "$MAIN_CMD $TEST_CMD"
+- "$MAIN_CMD black . --check"
+- "$MAIN_CMD flake8"
 notifications:
   on_success: change
   on_failure: always
-
 skip_commits:
   files:
-    - docs/**/*
-    - '**/*.rst'
-    - '*.md'
-    - .gitignore
-    - .travis.yml
-    - LICENSE.txt
+  - docs/**/*
+  - "**/*.rst"
+  - "*.md"
+  - ".gitignore"
+  - "appveyor.yml"
+  - LICENSE.txt
+deploy:
+  provider: pypi
+  skip_existing: true
+  user: j9ac9k
+  password:
+    secure: fDObdS1IA4TvprIfjLbc+QZbORgPF1Sk6ML/airCwFZjCiFGjQqXRIVypaVbkspOJtyKcO+nfXCjGWzylsUd0B7qOKQ92v4uBKl0QGVO1P4Yw+ZEKXzJaYJFL/kgTPdyooyMDvJCEMbx2PjQs2g7snMuL29hIv3/qx/I0DbBmm57bewa0+tSECyhn4Y+B/Uub2cG3Lfo2IM00uoqfVeMzTiShCT4iu7vvGSGhxQ4YjzAE7XYFOQyFOTdpLs+ybFgQjWZMSPq0DxSObB8pgPK82+288sxiKBQ3fniIykgTSgFyt0IClSlDfh3fiy4+Xoqj3hTyi1AGS+5F0Jc5XhHLlkY28cUAoFhjdcfhdaou1EmEws+TByKwnH8GvhqqeZPTShGfVXfgolqqw4YrxnlXdtUMKPNpyjUylOB4qtRnR7E1xdBToBU04KdR6aecKWxvEyj/4/pdxpfquwgXkhbYBDQdxy8Gow1TvRADUGYK2Hv1DvX8uBbC4OjyLhMymAj8NpwMDGgEqnSXeTxmrTmw+LBcl0hvIpCU3xtNtoQUMifZknl4Oc8j0UaTp32gkldY0t+ALnHrmHVi3yfyNyCGfCvBDf4NireYoZP3ckjmjefEPZBb4ZSQW04lrxpNaC2tQLqAmNjvfa8+NvaSDMRdF8J0oNz2lyuQ9nBkBO6WZ8=
+  distributions: sdist bdist_wheel
+  on:
+    tags: true
