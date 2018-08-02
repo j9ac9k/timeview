@@ -47,6 +47,7 @@ deploy:
   user: j9ac9k
   password: $PYPI_PASSWORD
   distributions: "sdist bdist_wheel"
+  skip_existing: true
   on:
     tags: true
     repo: j9ac9k/timeview
