@@ -11,14 +11,11 @@ All track intervals are of the type [), and duration points to the next unoccupi
 
 import abc
 import codecs
-import copy
 from collections import Iterable
-import json
 import logging
 import os
 import contextlib
 from builtins import str
-import unittest
 from pathlib import Path
 from typing import List
 
@@ -40,8 +37,18 @@ def convert_dtype(source, target_dtype):
     """
     assert isinstance(source, numpy.ndarray)
     source_dtype = source.dtype
-    assert source_dtype in (numpy.int16, numpy.int32, numpy.float32, numpy.float64), 'source must be a supported type'
-    assert target_dtype in (numpy.int16, numpy.int32, numpy.float32, numpy.float64), 'target must be a supported type'
+    assert source_dtype in (
+        numpy.int16,
+        numpy.int32,
+        numpy.float32,
+        numpy.float64,
+    ), "source must be a supported type"
+    assert target_dtype in (
+        numpy.int16,
+        numpy.int32,
+        numpy.float32,
+        numpy.float64,
+    ), "target must be a supported type"
     if source_dtype == target_dtype:
         return source
     else:  # conversion
@@ -57,11 +64,13 @@ def convert_dtype(source, target_dtype):
                 return source.astype(target_dtype) / (1 << 31)
         else:  # source_dtype == numpy.float32 / numpy.float64
             M = numpy.max(numpy.abs(source))
-            limit = 1-1e-16
+            limit = 1 - 1e-16
             if M > limit:
                 factor = limit / M
-                logger.warning(f'maximum float waveform value {M} is beyond [-{limit}, {limit}],'
-                               f'applying scaling of {factor}')
+                logger.warning(
+                    f"maximum float waveform value {M} is beyond [-{limit}, {limit}],"
+                    f"applying scaling of {factor}"
+                )
                 source *= factor
             if target_dtype == numpy.float32 or target_dtype == numpy.float64:
                 return source.astype(target_dtype)
@@ -85,7 +94,7 @@ class MultiChannelError(Error):
 
 
 class Track(metaclass=abc.ABCMeta):
-    default_suffix = '.trk'
+    default_suffix = ".trk"
 
     def __init__(self, path):
         self._fs = 0
@@ -111,6 +120,7 @@ class Track(metaclass=abc.ABCMeta):
 
     def set_value(self, value):
         raise NotImplementedError
+
     value = property(get_value, set_value)
 
     def get_fs(self):
@@ -118,6 +128,7 @@ class Track(metaclass=abc.ABCMeta):
 
     def set_fs(self, _value):
         raise Exception("Cannot change fs, try resample()")
+
     fs = property(get_fs, set_fs, doc="sampling frequency")
 
     @abc.abstractmethod
@@ -151,11 +162,11 @@ class Track(metaclass=abc.ABCMeta):
         """Loads object from name, adding default extension if missing."""
         # E = []
         suffix = Path(path).suffix
-        if suffix == '.wav':
+        if suffix == ".wav":
             return Wave.wav_read(path)
-        elif suffix == '.tmv':
+        elif suffix == ".tmv":
             return TimeValue.read_tmv(path)  # for now, handle nans
-        elif suffix == '.lab':
+        elif suffix == ".lab":
             return Partition.read(path)
         else:
             raise Exception(f"I don't know how to read files with suffix {suffix}")
@@ -192,7 +203,10 @@ class Track(metaclass=abc.ABCMeta):
 
 def get_track_classes() -> List[Track]:
     def all_subclasses(c):
-        return c.__subclasses__() + [a for b in c.__subclasses__() for a in all_subclasses(b)]
+        return c.__subclasses__() + [
+            a for b in c.__subclasses__() for a in all_subclasses(b)
+        ]
+
     return [obj for obj in all_subclasses(Track)]
 
 
@@ -209,7 +223,9 @@ class Event(Track):
         assert isinstance(time, numpy.ndarray)
         assert time.ndim == 1
         assert time.dtype == TIME_TYPE
-        assert (numpy.diff(time.astype(numpy.float)) > 0).all(), "times must be strictly monotonically increasing"
+        assert (
+            numpy.diff(time.astype(numpy.float)) > 0
+        ).all(), "times must be strictly monotonically increasing"
         assert isinstance(fs, int)
         assert fs > 0
         # assert isinstance(duration, TIME_TYPE) or isinstance(duration, int)
@@ -219,8 +235,9 @@ class Event(Track):
         self._duration = TIME_TYPE(duration)
 
     def get_time(self):
-        assert (numpy.diff(self._time.astype(numpy.float)) > 0).all(),\
-            "times must be strictly monotonically increasing"
+        assert (
+            numpy.diff(self._time.astype(numpy.float)) > 0
+        ).all(), "times must be strictly monotonically increasing"
         # in case the user messed with .time[index] directly
         return self._time
 
@@ -228,7 +245,9 @@ class Event(Track):
         assert isinstance(time, numpy.ndarray)
         assert time.ndim == 1
         assert time.dtype == TIME_TYPE
-        assert (numpy.diff(time.astype(numpy.float)) > 0).all(), "times must be strictly monotonically increasing"
+        assert (
+            numpy.diff(time.astype(numpy.float)) > 0
+        ).all(), "times must be strictly monotonically increasing"
         # assert (numpy.diff(time.astype(numpy.float)) >= 0).all(), "times must be strictly monotonically increasing"
         assert not (len(time) and self._duration <= time[-1]), "duration is not > times"
         self._time = time
@@ -244,7 +263,9 @@ class Event(Track):
 
     def set_duration(self, duration):
         assert isinstance(duration, TIME_TYPE) or isinstance(duration, int)
-        assert not (len(self._time) and duration <= self._time[-1]), "duration is not > times"
+        assert not (
+            len(self._time) and duration <= self._time[-1]
+        ), "duration is not > times"
         self._duration = duration
 
     time = property(get_time, set_time)
@@ -260,15 +281,19 @@ class Event(Track):
     def __add__(self, other):
         assert type(other) == type(self), "Cannot add Track objects of different types"
         assert self.fs == other.fs, "sampling frequencies must match"
-        time = numpy.concatenate((self.time, (other.time + self.duration).astype(other.time.dtype)))
+        time = numpy.concatenate(
+            (self.time, (other.time + self.duration).astype(other.time.dtype))
+        )
         duration = self.duration + other.duration
         return type(self)(time, self.fs, duration)
 
     def __eq__(self, other):
-        if (self._fs == other._fs) and \
-           (self._duration == other._duration) and \
-           (len(self._time) == len(other._time)) and \
-           (self._time == other._time).all():
+        if (
+            (self._fs == other._fs)
+            and (self._duration == other._duration)
+            and (len(self._time) == len(other._time))
+            and (self._time == other._time).all()
+        ):
             return True
         else:
             return False
@@ -297,16 +322,24 @@ class Event(Track):
             if len(self._time):
                 time = numpy.round(factor * self._time).astype(TIME_TYPE)
                 if (numpy.diff(time) == 0).any():
-                    logger.warning("new fs causes times to fold onto themselves due to lack in precision, "
-                                   "eliminating duplicates")
+                    logger.warning(
+                        "new fs causes times to fold onto themselves due to lack in precision, "
+                        "eliminating duplicates"
+                    )
                     time = numpy.unique(time)
                 if duration <= time[-1]:  # try to fix this situation
                     if len(time) > 1:
-                        if time[-2] == time[-1] - 1:  # is the penultimate point far enough away?
-                            raise Exception('cannot adjust last time point to be smaller '
-                                            'than the duration of the track')
-                    logger.warning("new fs causes last time point to be == duration, "
-                                   "retarding last time point by one sample")
+                        if (
+                            time[-2] == time[-1] - 1
+                        ):  # is the penultimate point far enough away?
+                            raise Exception(
+                                "cannot adjust last time point to be smaller "
+                                "than the duration of the track"
+                            )
+                    logger.warning(
+                        "new fs causes last time point to be == duration, "
+                        "retarding last time point by one sample"
+                    )
                     time[-1] -= 1
             else:
                 time = self._time
@@ -323,7 +356,7 @@ class Event(Track):
         time = self._time[ai:bi] - a
         return type(self)(time, self.fs, b - a)
 
-    default_suffix = '.evt'
+    default_suffix = ".evt"
 
     @classmethod
     def read(cls, name, fs, duration, *_args, **_kwargs):
@@ -333,9 +366,9 @@ class Event(Track):
             name += ext
         else:
             ext = os.path.splitext(name)[1].lower()
-        if ext == '.pml' or ext == cls.default_suffix:
+        if ext == ".pml" or ext == cls.default_suffix:
             self = cls.read_pml(name, fs)
-        elif ext == '.pp':
+        elif ext == ".pp":
             self = cls.read_PointProcess(name, fs)
         else:
             raise ValueError("file '{}' has unknown format".format(name))
@@ -345,10 +378,10 @@ class Event(Track):
 
     @classmethod
     def read_pml(cls, name, fs=48000):
-        with open(name, 'r') as f:
+        with open(name, "r") as f:
             lines = f.readlines()
         if len(lines) == 0:
-            logger.warning('pmlread(): empty file')
+            logger.warning("pmlread(): empty file")
             return Event(numpy.empty(0, dtype=TIME_TYPE), fs, 0)
         time = numpy.zeros(len(lines), TIME_TYPE)
         for i, line in enumerate(lines):
@@ -357,7 +390,10 @@ class Event(Track):
             t2 = token[1]
             time[i] = numpy.round(float(t2) * fs)
         if (numpy.diff(time) <= 0).any():
-            logger.error('events are too close (for fs=%i) in file: %s, merging events' % (fs, name))
+            logger.error(
+                "events are too close (for fs=%i) in file: %s, merging events"
+                % (fs, name)
+            )
             time = numpy.unique(time)
         # we cannot truly know the duration, so we are giving it the minimum duration
         return Event(time, fs, int(time[-1] + 1))
@@ -367,12 +403,12 @@ class Event(Track):
     @classmethod
     def read_pm(cls, name, fs, _duration):
         # suited for loading .pm files (pitch mark) that exist in CMU-ARCTIC
-        with open(name, 'r') as f:
+        with open(name, "r") as f:
             lines = f.readlines()
         if len(lines) == 0:
-            logger.warning('pmread(): empty file')
+            logger.warning("pmread(): empty file")
             return Event(numpy.empty(0, dtype=TIME_TYPE), fs, 0)
-        time = numpy.zeros(len(lines), TIME_TYPE)-1
+        time = numpy.zeros(len(lines), TIME_TYPE) - 1
         for i, line in enumerate(lines):
             token = line.split(" ")
             t1 = token[0]
@@ -387,10 +423,13 @@ class Event(Track):
 
         time = time[time != -1]
         if (numpy.diff(time) <= 0).any():
-            logger.error('events are too close (for fs=%i) in file: %s, merging events' % (fs, name))
+            logger.error(
+                "events are too close (for fs=%i) in file: %s, merging events"
+                % (fs, name)
+            )
             time = numpy.unique(time)
         # if int(time[-1] + 1) >= duration:
-            # time = time[:-1]
+        # time = time[:-1]
         # we cannot truly know the duration, so we are giving it the minimum duration
         return Event(time, fs, int(time[-1] + 1))
 
@@ -402,11 +441,11 @@ class Event(Track):
         self.write_pml(name)
 
     def write_pml(self, name):
-        f = open(name, 'w')
+        f = open(name, "w")
         t1 = 0.
         for t in self.time:
             t2 = t / self.fs
-            f.write('%f %f .\n' % (t1, t2))
+            f.write("%f %f .\n" % (t1, t2))
             t1 = t2
         f.close()
 
@@ -448,20 +487,20 @@ class Event(Track):
     def insert(self, a, t):  #
         assert isinstance(t, type(self))
         index = numpy.where((self.time >= a))[0][0]  # first index of the "right side"
-        self._time = numpy.hstack((self._time[:index], t._time + a, self._time[index:] + t.duration))
+        self._time = numpy.hstack(
+            (self._time[:index], t._time + a, self._time[index:] + t.duration)
+        )
         self._duration += t.duration
 
 
 class Wave(Track):
     """monaural waveform"""
-    default_suffix = '.wav'
 
-    def __init__(self,
-                 value: numpy.ndarray,
-                 fs,
-                 duration=None,
-                 offset=0,
-                 path=None) -> None:
+    default_suffix = ".wav"
+
+    def __init__(
+        self, value: numpy.ndarray, fs, duration=None, offset=0, path=None
+    ) -> None:
         super().__init__(path)
         assert isinstance(value, numpy.ndarray)
         assert 1 <= value.ndim, "only a single channel is supported"
@@ -469,14 +508,16 @@ class Wave(Track):
         assert fs > 0
         self._value = value
         self._fs = fs
-        self._offset = offset  # this is required to support heterogenous fs in multitracks
-        self.type = 'Wave'
-        self.label = f'amplitude-{value.dtype}'
+        self._offset = (
+            offset
+        )  # this is required to support heterogenous fs in multitracks
+        self.type = "Wave"
+        self.label = f"amplitude-{value.dtype}"
         if not duration:
             duration = len(self._value)
-        assert len(self._value) <= duration < len(self._value) + 1,\
-            "Cannot set duration of a wave to other than a number in "\
-            "[length, length+1), where length = len(self.value)"
+        assert (
+            len(self._value) <= duration < len(self._value) + 1
+        ), "Cannot set duration of a wave to other than a number in " "[length, length+1), where length = len(self.value)"
         self._duration = duration
 
     def get_offset(self):
@@ -485,13 +526,19 @@ class Wave(Track):
     def set_offset(self, offset):
         assert 0.0 <= offset < 1.0
         self._offset = offset
+
     offset = property(get_offset, set_offset)
 
     def get_time(self):
-        return numpy.arange(len(self._value)) if self._offset == 0 else numpy.arange(len(self._value)) + self._offset
+        return (
+            numpy.arange(len(self._value))
+            if self._offset == 0
+            else numpy.arange(len(self._value)) + self._offset
+        )
 
     def set_time(self, time):
         raise Exception("can't set times for Wave")
+
     time = property(get_time, set_time)
 
     def get_value(self):
@@ -499,20 +546,22 @@ class Wave(Track):
 
     def set_value(self, value):
         assert isinstance(value, numpy.ndarray)
-        assert 1 == value.ndim, 'only a single channel is supported'
+        assert 1 == value.ndim, "only a single channel is supported"
         self._value = value
         if not (len(self._value) <= self._duration < len(self._value) + 1):
             self._duration = len(self._value)
+
     value = property(get_value, set_value)
 
     def get_duration(self):
         return self._duration
 
     def set_duration(self, duration):
-        assert len(self._value) <= duration < len(self._value) + 1,\
-            "Cannot set duration of a wave to other than a number in [length, length+1) "\
-            "- where length = len(self.value)"
+        assert (
+            len(self._value) <= duration < len(self._value) + 1
+        ), "Cannot set duration of a wave to other than a number in [length, length+1) " "- where length = len(self.value)"
         self._duration = duration
+
     duration = property(get_duration, set_duration)
 
     #  def get_channels(self):
@@ -539,14 +588,17 @@ class Wave(Track):
         elif dtype == numpy.float64:
             return 64
         else:
-            raise Exception('unknown dtype = %s' % dtype)
+            raise Exception("unknown dtype = %s" % dtype)
+
     bitdepth = property(get_bitdepth)
 
     def __eq__(self, other):
-        if (self._fs == other._fs) and \
-           (self._duration == other._duration) and \
-           (len(self._value) == len(other._value)) and \
-           (self._value == other._value).all():
+        if (
+            (self._fs == other._fs)
+            and (self._duration == other._duration)
+            and (len(self._value) == len(other._value))
+            and (self._value == other._value).all()
+        ):
             return True
         else:
             return False
@@ -555,8 +607,16 @@ class Wave(Track):
         return not self.__eq__(other)
 
     def __str__(self):
-        return f"value={self.value}\nmin={self.value.min()}\nmax={self.value.max()}\n" \
-               f"dtype={self.dtype}\nfs={self.fs}\nduration={self.duration}"
+        return "\n".join(
+            [
+                f"value={self.value}",
+                f"min={self.value.min()}",
+                f"max={self.value.max()}",
+                f"dtype={self.dtype}",
+                f"fs={self.fs}",
+                f"duration={self.duration}",
+            ]
+        )
 
     def __len__(self):
         return len(self._value)
@@ -576,14 +636,17 @@ class Wave(Track):
             # from pysig import multirate
             #  import fractions
             #  return type(self)(multirate.resample(self._value, fractions.Fraction(fs, self._fs)), fs)
-            return type(self)(multirate.resample(self._value, self._fs, fs), fs)
+            # return type(self)(multirate.resample(self._value, self._fs, fs), fs)
+            raise NotImplementedError
         else:
             return self
 
     def convert_dtype(self, target_dtype):
         """returns a new wave with the waveform in the specified target_dtype"""
         # TODO: take care of setting new min and max
-        return type(self)(convert_dtype(self._value, target_dtype), self._fs, path=self.path)
+        return type(self)(
+            convert_dtype(self._value, target_dtype), self._fs, path=self.path
+        )
 
     def select(self, a, b):
         assert a >= 0
@@ -606,15 +669,23 @@ class Wave(Track):
         fs, value = wav_read(path, mmap=mmap)
         if value.ndim == 1:
             if channel is not None and channel != 0:
-                raise MultiChannelError('cannot select channel {} from monaural file {}'.format(channel, path))
+                raise MultiChannelError(
+                    "cannot select channel {} from monaural file {}".format(
+                        channel, path
+                    )
+                )
         if value.ndim == 2:
             if channel is None:
-                raise MultiChannelError(f'must select channel when loading file {path} with {value.shape[1]} channels')
+                raise MultiChannelError(
+                    f"must select channel when loading file {path} with {value.shape[1]} channels"
+                )
             try:
                 value = value[:, channel]
             except IndexError:
-                raise MultiChannelError(f'cannot select channel {channel} from file '
-                                        f'{path} with {value.shape[1]} channels')
+                raise MultiChannelError(
+                    f"cannot select channel {channel} from file "
+                    f"{path} with {value.shape[1]} channels"
+                )
         wav = Wave(value, fs, path=path)
         if value.dtype == numpy.int16:
             wav.min = -32767
@@ -622,6 +693,7 @@ class Wave(Track):
         else:
             raise NotImplementedError
         return wav
+
     wav_read = read_wav
 
     def write(self, name, *_args, **_kwargs):
@@ -688,19 +760,24 @@ class Wave(Track):
         assert self.duration >= length
         ramp = numpy.linspace(1, 0, length + 2)[1:-1]  # don't include 0 and 1
         value = self.value.copy()
-        value[-length:] = value[-length:] * ramp + wave.value[:length] * (1 - ramp)  # TODO: think about dtypes here
+        value[-length:] = value[-length:] * ramp + wave.value[:length] * (
+            1 - ramp
+        )  # TODO: think about dtypes here
         value = numpy.concatenate((value, wave.value[length:]))
         return type(self)(value, self.fs)
 
     # TODO: Test / fix me!
     def time_warp(self, x, y):
         raise NotImplementedError
-        logger.warning('time_warping wave, most of the time this is not what is desired')
+        logger.warning(
+            "time_warping wave, most of the time this is not what is desired"
+        )
         time = numpy.arange(len(self._value))
         # time = index / self._fs
         time = numpy.round(numpy.interp(time, x, y)).astype(numpy.int)
         # index = int(time * self.fs)
         self._value = self._value[time]
+
 
 class TimeValue(Track):
     def __init__(self, time, value, fs, duration, path=None):
@@ -708,7 +785,9 @@ class TimeValue(Track):
         assert isinstance(time, numpy.ndarray)
         assert time.ndim == 1
         assert time.dtype == TIME_TYPE
-        assert (numpy.diff(time.astype(numpy.float)) > 0).all(), "times must be strictly monotonically increasing"
+        assert (
+            numpy.diff(time.astype(numpy.float)) > 0
+        ).all(), "times must be strictly monotonically increasing"
         assert isinstance(value, numpy.ndarray)
         assert isinstance(fs, int)
         assert fs > 0
@@ -721,13 +800,16 @@ class TimeValue(Track):
         self._duration = duration
         self.min = numpy.nanmin(value)
         self.max = numpy.nanmax(value)
-        self.unit = ''
-        self.label = ''
+        self.unit = ""
+        self.label = ""
         self.path = path
 
     def get_time(self):
-        assert (numpy.diff(self._time.astype(numpy.float)) > 0).all(),\
-            "times must be strictly monotonically increasing"  # in case the user messed with .time[index] directly
+        assert (
+            numpy.diff(self._time.astype(numpy.float)) > 0
+        ).all(), (
+            "times must be strictly monotonically increasing"
+        )  # in case the user messed with .time[index] directly
         return self._time
 
     def set_time(self, time):
@@ -735,7 +817,9 @@ class TimeValue(Track):
         assert time.ndim == 1
         assert time.dtype == TIME_TYPE
         assert not (len(time) and self._duration <= time[-1]), "duration is not > times"
-        assert (numpy.diff(time.astype(numpy.float)) > 0).all(), "times must be strictly monotonically increasing"
+        assert (
+            numpy.diff(time.astype(numpy.float)) > 0
+        ).all(), "times must be strictly monotonically increasing"
         assert len(time) == len(self._value), "length of time and value must match"
         self._time = time
 
@@ -748,23 +832,34 @@ class TimeValue(Track):
         assert isinstance(value, numpy.ndarray)
         assert len(self._time) == len(value), "length of time and value must match"
         self._value = value
+
     value = property(get_value, set_value)
 
-    def get_duration(self): return self._duration
+    def get_duration(self):
+        return self._duration
 
-    def set_duration(self, duration):  # assume times are available, if not, this must be overridden
+    def set_duration(
+        self, duration
+    ):  # assume times are available, if not, this must be overridden
         assert isinstance(duration, TIME_TYPE) or isinstance(duration, int)
-        assert not (len(self._time) and duration <= self._time[-1]), "duration is not > times"
+        assert not (
+            len(self._time) and duration <= self._time[-1]
+        ), "duration is not > times"
         self._duration = duration
+
     duration = property(get_duration, set_duration, doc="duration")
 
     def __eq__(self, other):
-        if (self._fs == other._fs) and \
-           (self._duration == other._duration) and \
-           (len(self._time) == len(other._time)) and \
-           (len(self._value) == len(other._value)) and \
-           (self._time == other._time).all() and \
-           numpy.allclose(numpy.round(self._value, 3), numpy.round(other._value, 3)):
+        if (
+            (self._fs == other._fs)
+            and (self._duration == other._duration)
+            and (len(self._time) == len(other._time))
+            and (len(self._value) == len(other._value))
+            and (self._time == other._time).all()
+            and numpy.allclose(
+                numpy.round(self._value, 3), numpy.round(other._value, 3)
+            )
+        ):
             return True
         else:
             return False
@@ -781,7 +876,9 @@ class TimeValue(Track):
     def __add__(self, other):
         assert type(other) == type(self), "Cannot add Track objects of different types"
         assert self.fs == other.fs, "sampling frequencies must match"
-        time = numpy.concatenate((self.time, (other.time + self.duration).astype(other.time.dtype)))
+        time = numpy.concatenate(
+            (self.time, (other.time + self.duration).astype(other.time.dtype))
+        )
         value = numpy.concatenate((self.value, other.value))
         duration = self.duration + other.duration
         return type(self)(time, value, self.fs, duration)
@@ -798,7 +895,11 @@ class TimeValue(Track):
         if fs != self._fs:
             factor = fs / self._fs
             time = numpy.round(factor * self._time).astype(TIME_TYPE)
-            assert (numpy.diff(time) > 0).all(), "new fs causes times to fold onto themselves due to lack in precision"
+            assert (
+                numpy.diff(time) > 0
+            ).all(), (
+                "new fs causes times to fold onto themselves due to lack in precision"
+            )
             # need to use numpy.round for consistency - it's different from the built-in round
             duration = int(numpy.ceil(factor * self._duration))
             return type(self)(time, self._value, fs, duration)
@@ -816,24 +917,24 @@ class TimeValue(Track):
         value = self._value[ai:bi]  # this is a view - should probably be a copy.
         return type(self)(time, value, self.fs, TIME_TYPE(b - a))
 
-    default_suffix = '.tmv'
+    default_suffix = ".tmv"
 
     @classmethod
     def read(cls, name, track_name=None, fs=300_000, duration=None, *_args, **_kwargs):
         """Loads object from name, adding default extension if missing."""
         if name == os.path.splitext(name)[0]:
             if track_name:
-                ext = '.' + track_name
+                ext = "." + track_name
             else:
                 ext = cls.default_suffix
             name += ext
         else:
             ext = os.path.splitext(name)[1].lower()
-        if ext in ('.pit', '.nrg', cls.default_suffix):
+        if ext in (".pit", ".nrg", cls.default_suffix):
             self = cls.read_tmv(name, fs)
-        elif ext == '.f0':
+        elif ext == ".f0":
             self = cls.read_pitchtier(name, fs)[0]
-        elif ext == '.pitchtier':
+        elif ext == ".pitchtier":
             self = cls.read_pitchtier(name, fs)
         else:
             self = None
@@ -854,23 +955,25 @@ class TimeValue(Track):
         self.path = name
         return self
 
-
     @classmethod
     def read_f0(cls, name, frameRate=0.01, frameSize=0.0075, fs=48000):
         # return TimeValue(numpy.ndarray([1]).astype(TIME_TYPE), numpy.ndarray([1]), fs, 1)
         # 4 fields for each frame, pitch, probability of voicing, local root mean squared measurements,
         # and the peak normalized cross-correlation value frame arguments are in seconds
-        f = open(name, 'r')
+        f = open(name, "r")
         lines = f.readlines()
         f.close()
         F = len(lines)
-        time = numpy.round((numpy.arange(F) * frameRate + frameSize / 2) * fs).astype(TIME_TYPE)
+        time = numpy.round((numpy.arange(F) * frameRate + frameSize / 2) * fs).astype(
+            TIME_TYPE
+        )
         duration = numpy.round((F * frameRate + frameSize) * fs).astype(TIME_TYPE)
         # time = numpy.arange(len(lines)) * frameRate + frameSize / 2
         value_f0 = numpy.zeros(F, numpy.float32)
         value_vox = numpy.zeros(F, numpy.float32)
         import re
-        form = re.compile(r'^(\S+)\s+(\S+)\s+(\S+)\s+(\S+)$')
+
+        form = re.compile(r"^(\S+)\s+(\S+)\s+(\S+)\s+(\S+)$")
         for i, line in enumerate(lines):
             match = form.search(line)
             if not match:
@@ -883,7 +986,9 @@ class TimeValue(Track):
             value_vox[i] = float(voicing)
         index = numpy.where(value_f0 > 0)[0]  # keep only nonzeros F0 values
         pit = TimeValue(time[index], value_f0[index], fs, duration)
-        vox = Partition.from_TimeValue(TimeValue(time, value_vox, fs, duration))  # return a Partition
+        vox = Partition.from_TimeValue(
+            TimeValue(time, value_vox, fs, duration)
+        )  # return a Partition
         return pit, vox
 
     f0read = read_f0
@@ -899,12 +1004,14 @@ class TimeValue(Track):
 
     @classmethod
     def read_frm(cls, name, fs=48000):
-        f = open(name, 'r')
+        f = open(name, "r")
         lines = f.readlines()
         f.close()
         frameRate = 0.01
         frameSize = 0.049
-        time = numpy.round((numpy.arange(len(lines)) * frameRate + frameSize / 2) * fs).astype(TIME_TYPE)
+        time = numpy.round(
+            (numpy.arange(len(lines)) * frameRate + frameSize / 2) * fs
+        ).astype(TIME_TYPE)
         duration = (time[-1] + 1).astype(TIME_TYPE)
         for i, line in enumerate(lines):
             fb = numpy.array(line.split()).astype(numpy.float)
@@ -920,7 +1027,7 @@ class TimeValue(Track):
         name_wo_ext = os.path.splitext(name)[0]
         if name == name_wo_ext:
             if track_name:
-                ext = '.' + track_name
+                ext = "." + track_name
             else:
                 ext = self.default_suffix
             name += ext
@@ -937,13 +1044,13 @@ class TimeValue(Track):
         #         f.write('\t'.join(str(round(x, 16)) for x in tv) + '\n')
 
     def write_frm(self, name):
-        with open(name, 'w') as f:
+        with open(name, "w") as f:
             if isinstance(self._value[0], Iterable):
                 for fb in self._value:
-                    f.write('\t'.join(str(round(f, 3)) for f in fb) + '\n')
+                    f.write("\t".join(str(round(f, 3)) for f in fb) + "\n")
             else:
                 for fb in self._value:
-                    f.write(str(round(fb, 3)) + '\n')
+                    f.write(str(round(fb, 3)) + "\n")
 
     @classmethod
     def from_Partition(cls, p):
@@ -952,7 +1059,9 @@ class TimeValue(Track):
         time = numpy.r_[p.time[:-1], p.time[-1] - 1, p.time[1:-1] - 1]
         time.sort()
         # double this to keep it constant
-        value = numpy.array([p.value[int(i)] for i in numpy.arange(0, len(p.value), 0.5)])
+        value = numpy.array(
+            [p.value[int(i)] for i in numpy.arange(0, len(p.value), 0.5)]
+        )
         return TimeValue(time, value, p.fs, p.duration)
 
     # def __getitem__(self, index):  # should I make the default just the value?
@@ -1013,11 +1122,15 @@ class TimeValue(Track):
                     v = a * rv + (1.0 - a) * lv
         return v
 
-    def get(self, T, interpolation="nearest"):  # start using interp_* methods, which are faster
+    def get(
+        self, T, interpolation="nearest"
+    ):  # start using interp_* methods, which are faster
         """return the values at times T"""
         if isinstance(T, numpy.ndarray):
             assert T.ndim == 1
-            n = self._value.shape[1] if self._value.ndim > 1 else 1  # this can be done much better I'm sure
+            n = (
+                self._value.shape[1] if self._value.ndim > 1 else 1
+            )  # this can be done much better I'm sure
             V = numpy.empty((T.shape[0], n), dtype=self._value.dtype)
             for i, t in enumerate(T):
                 # TODO: speed this up by using a cached version of the interpolate function
@@ -1035,7 +1148,7 @@ class TimeValue(Track):
         index = numpy.interp(T, self.time, numpy.arange(T))
         return self.value[numpy.round(index)]  # TODO: test me!
 
-    def interpolate(self, T, kind='linear'):
+    def interpolate(self, T, kind="linear"):
         """kind : str or int, optional
         Specifies the kind of interpolation as a string
         ('linear', 'nearest', 'zero', 'slinear', 'quadratic, 'cubic'
@@ -1044,11 +1157,20 @@ class TimeValue(Track):
         specifying the order of the spline interpolator to use.
         Default is 'linear'."""
         from scipy.interpolate import interp1d
+
         if len(self.time):
-            f = interp1d(self.time, self.value, kind=kind, axis=0, copy=True, bounds_error=True, fill_value=numpy.nan)
+            f = interp1d(
+                self.time,
+                self.value,
+                kind=kind,
+                axis=0,
+                copy=True,
+                bounds_error=True,
+                fill_value=numpy.nan,
+            )
             return f(T)
         else:
-            logger.warning('interpolating without data')
+            logger.warning("interpolating without data")
             return numpy.ones(len(T)) * numpy.nan
 
     # def select_index(self, a, b):
@@ -1100,7 +1222,8 @@ class TimeValue(Track):
         time = numpy.interp(self.time, X, Y).astype(self.time.dtype)
         if 0:
             from matplotlib import pylab
-            pylab.plot(X, Y, 'rx-')
+
+            pylab.plot(X, Y, "rx-")
             for x, y in zip(self.time, time):
                 pylab.plot([x, x, 0], [0, y, y])
             pylab.show()
@@ -1110,11 +1233,21 @@ class TimeValue(Track):
 
     def interp(self, time):  # TODO: unify with get()
         if self._value.ndim == 1:
-            return numpy.interp(time, self._time, self._value, self._value[0], self._value[-1])
+            return numpy.interp(
+                time, self._time, self._value, self._value[0], self._value[-1]
+            )
         elif self._value.ndim == 2:
-            value = numpy.empty((len(time), self._value.shape[1]), dtype=self._value.dtype)
+            value = numpy.empty(
+                (len(time), self._value.shape[1]), dtype=self._value.dtype
+            )
             for j in range(self._value.shape[1]):
-                value[:, j] = numpy.interp(time, self._time, self._value[:, j], self._value[0, j], self._value[-1, j])
+                value[:, j] = numpy.interp(
+                    time,
+                    self._time,
+                    self._value[:, j],
+                    self._value[0, j],
+                    self._value[-1, j],
+                )
             return value
         else:
             raise Exception
@@ -1122,7 +1255,8 @@ class TimeValue(Track):
 
 class Label(Track):
     """Like Partition, but label regions do NOT have to be contiguous"""
-    default_suffix = '.lab'
+
+    default_suffix = ".lab"
 
     def check(self):
         """value[k] has beginning and ending times time[2*k] and time[2*k+1]"""
@@ -1132,17 +1266,26 @@ class Label(Track):
         # assert (numpy.diff(self._time.astype(numpy.float)) >= 0).all(),\
         # "times must be (non-strictly) monotonically increasing"
         if not (numpy.diff(self._time.astype(numpy.float)) >= 0).all():
-            logger.warning('Label times must be (non-strictly) monotonically increasing')
+            logger.warning(
+                "Label times must be (non-strictly) monotonically increasing"
+            )
         assert isinstance(self._value, numpy.ndarray)
         # assert self._value.ndim == 1 # TODO: can I remove this?
         assert isinstance(self._fs, int)
         assert self._fs > 0
-        assert (numpy.diff(self._time[::2]) > 0).all(),\
+        assert (
+            numpy.diff(self._time[::2]) > 0
+        ).all(), (
             "zero-duration labels are not permitted (but abutting labels are permitted)"
+        )
         # this means an empty partition contains one time value at 0!!!
-        assert len(self._time) == 2 * len(self._value), "length of time and value *2 must match"
+        assert len(self._time) == 2 * len(
+            self._value
+        ), "length of time and value *2 must match"
         assert isinstance(self._duration, TIME_TYPE) or isinstance(self._duration, int)
-        assert not (len(self._time) and self._duration < self._time[-1]), "duration is not >= times"
+        assert not (
+            len(self._time) and self._duration < self._time[-1]
+        ), "duration is not >= times"
         return True
 
     def __init__(self, time, value, fs, duration, path=None):
@@ -1163,6 +1306,7 @@ class Label(Track):
         self._time = time
         if __debug__:
             self.check()
+
     time = property(get_time, set_time)
 
     def get_value(self):
@@ -1174,32 +1318,45 @@ class Label(Track):
         self._value = value
         if __debug__:
             self.check()
+
     value = property(get_value, set_value)
 
-    def get_duration(self): return self._duration
+    def get_duration(self):
+        return self._duration
 
     def set_duration(self, duration):
         assert isinstance(duration, (TIME_TYPE, int, numpy.int64))
         if len(self.time) > 0:
             assert duration > self.time[-1]
         self._duration = duration
+
     duration = property(get_duration, set_duration, doc="duration of track")
 
     def __str__(self):
         # s = [u"0"]
         # for i in range(len(self._value)):
         #    s.append(':%s:%i/%.3f' % (self._value[i], self._time[i + 1], self._time[i + 1] / self._fs))
-        s = [u""]
+        s = [""]
         for i in range(len(self._value)):
-            s.append(f'#{i}: %i/%.3f: %s :%i/%.3f\n' % (self._time[2*i], self._time[2*i] / self._fs, self._value[i],
-                                                        self._time[2*i + 1], self._time[2*i + 1] / self._fs))
+            s.append(
+                f"#{i}: %i/%.3f: %s :%i/%.3f\n"
+                % (
+                    self._time[2 * i],
+                    self._time[2 * i] / self._fs,
+                    self._value[i],
+                    self._time[2 * i + 1],
+                    self._time[2 * i + 1] / self._fs,
+                )
+            )
         s = "".join(s)
         return "%sfs=%i\nduration=%i" % (s, self._fs, self._duration)
 
     def __add__(self, other):
         if self._fs != other._fs:
             raise Exception("sampling frequencies must match")
-        time = numpy.hstack((self._time, self.duration + other._time))  # other._time[0] == 0
+        time = numpy.hstack(
+            (self._time, self.duration + other._time)
+        )  # other._time[0] == 0
         value = numpy.hstack((self._value, other._value))
         duration = self.duration + other.duration
         return Label(time, value, self.fs, duration)
@@ -1213,7 +1370,11 @@ class Label(Track):
             factor = fs / self._fs
             time = numpy.round(factor * self._time).astype(TIME_TYPE)
             time[-1] = numpy.ceil(factor * self._time[-1])
-            assert (numpy.diff(time) > 0).all(), "new fs causes times to fold onto themselves due to lack in precision"
+            assert (
+                numpy.diff(time) > 0
+            ).all(), (
+                "new fs causes times to fold onto themselves due to lack in precision"
+            )
             duration = numpy.round(factor * self._duration).astype(TIME_TYPE)
             return type(self)(time, self._value, fs, duration)
         else:
@@ -1231,7 +1392,7 @@ class Label(Track):
             ai -= 1
         if bi % 2 == 1:  # inside label
             bi += 1
-        value = self._value[(ai//2):(bi//2)]
+        value = self._value[(ai // 2) : (bi // 2)]
         time = self.time[ai:bi]
         time = time - a
         duration = b - a
@@ -1242,37 +1403,44 @@ class Label(Track):
         return type(self)(time.astype(TIME_TYPE), value, self.fs, duration)
 
     @classmethod
-    def read_lbl(cls, path, fs=300000, encoding='UTF8'):
+    def read_lbl(cls, path, fs=300000, encoding="UTF8"):
         """load times, values from a .lbl label file"""
-        with open(path, 'r', encoding=encoding) as f:
+        with open(path, "r", encoding=encoding) as f:
             lines = f.readlines()
         if len(lines) == 0:
             raise ValueError("file '{}' is empty".format(path))
-        lines += '\n'  # make sure it's terminated
+        lines += "\n"  # make sure it's terminated
         time = []
         value = []
         # label_type = numpy.float64
         for i, line in enumerate(lines):
-            if line != '\n':
+            if line != "\n":
                 try:
                     t1, t2, label = line.split()
                 except ValueError:
-                    logger.warning('ignoring line "%s" in file %s at line %i' % (line, path, i + 1))
+                    logger.warning(
+                        'ignoring line "%s" in file %s at line %i' % (line, path, i + 1)
+                    )
                     continue
                 t1 = float(t1)  # / 1000  # this particular
                 t2 = float(t2)  # / 1000  # file format
-                if label[-1] == '\r':
+                if label[-1] == "\r":
                     label = label[:-1]
                 dur = t2 - t1
                 if dur > 0:
                     time.extend([t1, t2])
                     value.append(label)
                 elif dur == 0:
-                    logger.warning('zero-length label "%s" in file %s at line %i, ignoring' % (label, path, i + 1))
+                    logger.warning(
+                        'zero-length label "%s" in file %s at line %i, ignoring'
+                        % (label, path, i + 1)
+                    )
                 else:
-                    raise LabreadError("label file contains times that are not monotonically increasing")
+                    raise LabreadError(
+                        "label file contains times that are not monotonically increasing"
+                    )
         if len(time) == 0:
-            raise(Exception('file is empty or all lines were ignored'))
+            raise (Exception("file is empty or all lines were ignored"))
         time = numpy.round(numpy.array(time) * fs).astype(TIME_TYPE)
         # assert labels are not longer than X characters
         value = numpy.array(value)
@@ -1286,7 +1454,7 @@ class Label(Track):
 
 
 class Partition(Track):
-    default_suffix = '.lab'
+    default_suffix = ".lab"
 
     def check(self):
         assert isinstance(self._time, numpy.ndarray)
@@ -1295,7 +1463,7 @@ class Partition(Track):
         # assert (numpy.diff(self._time.astype(numpy.float)) > 0).all(),\
         #     "times must be strictly monotonically increasing"
         if not (numpy.diff(self._time.astype(numpy.float)) > 0).all():
-            logger.warning('Partition: times must be strictly monotonically increasing')
+            logger.warning("Partition: times must be strictly monotonically increasing")
         assert isinstance(self._value, numpy.ndarray)
         # assert self._value.ndim == 1 # TODO: can I remove this?
         assert isinstance(self._fs, int)
@@ -1304,9 +1472,11 @@ class Partition(Track):
         assert self._time[0] == 0, "partition must begin at time 0"
         # assert (numpy.diff(self._time) > 0).all(), "zero-duration labels are not permitted"
         if not (numpy.diff(self._time) > 0).all():
-            logger.warning('Partition: zero-duration labels are not permitted')
+            logger.warning("Partition: zero-duration labels are not permitted")
         # this means an empty partition contains one time value at 0!!!
-        assert len(self._time) == len(self._value) + 1, "length of time and value+1 must match"
+        assert (
+            len(self._time) == len(self._value) + 1
+        ), "length of time and value+1 must match"
         # else:
         #    assert len(self._value) == 0
         return True
@@ -1322,7 +1492,7 @@ class Partition(Track):
         # assert (numpy.diff(self._time.astype(numpy.float)) > 0).all(),\
         # "times must be strictly monotonically increasing" # in case the user messed with .time[index] directly
         if not (numpy.diff(self._time.astype(numpy.float)) > 0).all():
-            logger.warning('get_time times must be strictly monotonically increasing')
+            logger.warning("get_time times must be strictly monotonically increasing")
         return self._time
 
     def set_time(self, time):
@@ -1335,10 +1505,13 @@ class Partition(Track):
             # assert (numpy.diff(time) >= 0).all(), "zero-duration labels are not permitted"
             if not (numpy.diff(time) > 0).all():
                 logger.warning("encorter zero-duration labels are not permitted")
-            assert len(time) == len(self._value) + 1, "length of time and value+1 must match"
+            assert (
+                len(time) == len(self._value) + 1
+            ), "length of time and value+1 must match"
         else:
             assert len(self._value) == 0
         self._time = time
+
     time = property(get_time, set_time)
 
     def get_value(self):
@@ -1347,8 +1520,11 @@ class Partition(Track):
     def set_value(self, value):
         assert isinstance(value, numpy.ndarray)
         # assert value.ndim == 1
-        assert len(self._time) == len(self._value) + 1, "length of time and value must match"
+        assert (
+            len(self._time) == len(self._value) + 1
+        ), "length of time and value must match"
         self._value = value
+
     value = property(get_value, set_value)
 
     def get_duration(self):
@@ -1360,22 +1536,27 @@ class Partition(Track):
     def set_duration(self, duration):
         assert isinstance(duration, TIME_TYPE) or isinstance(duration, int)
         if len(self._value):
-            assert duration > self._time[-2],\
-                "can't set duration to a smaller or equal value than the next-to-last boundary"\
-                " (this would result in losing the last value)"
+            assert (
+                duration > self._time[-2]
+            ), "can't set duration to a smaller or equal value than the next-to-last boundary (this would result in losing the last value)"
             self._time[-1] = duration
         else:
             if duration != 0:
-                raise Exception("cannot set duration of an empty Partition to anything but 0")
+                raise Exception(
+                    "cannot set duration of an empty Partition to anything but 0"
+                )
+
     duration = property(get_duration, set_duration, doc="duration of track in fs")
 
     def __eq__(self, other):
         try:
-            if (self._fs == other._fs) and \
-               (len(self._time) == len(other._time)) and \
-               (len(self._value) == len(other._value)) and \
-               (self._time == other._time).all() and \
-               (self._value == other._value).all():
+            if (
+                (self._fs == other._fs)
+                and (len(self._time) == len(other._time))
+                and (len(self._value) == len(other._value))
+                and (self._time == other._time).all()
+                and (self._value == other._value).all()
+            ):
                 return True
         except AttributeError:
             pass
@@ -1401,7 +1582,11 @@ class Partition(Track):
             factor = fs / self._fs
             time = numpy.round(factor * self._time).astype(TIME_TYPE)
             time[-1] = numpy.ceil(factor * self._time[-1])
-            assert (numpy.diff(time) > 0).all(), "new fs causes times to fold onto themselves due to lack in precision"
+            assert (
+                numpy.diff(time) > 0
+            ).all(), (
+                "new fs causes times to fold onto themselves due to lack in precision"
+            )
             return type(self)(time, self._value, fs)
         else:
             return self
@@ -1419,7 +1604,9 @@ class Partition(Track):
         if self._time[bi] < b:  # append
             bi += 1
         value = self._value[ai:bi]
-        time = self.time[ai:bi+1].copy()  # otherwise we are going to modify the original below!
+        time = self.time[
+            ai : bi + 1
+        ].copy()  # otherwise we are going to modify the original below!
         # if a < self._time[ai]:  # prepend
         time[0] = a
         # if self._time[bi] < b:  # append
@@ -1434,13 +1621,13 @@ class Partition(Track):
         """
         if name == os.path.splitext(name)[0]:
             assert track_name, "neither track name nor extension specified"
-            ext = '.' + track_name
+            ext = "." + track_name
             name += ext
         else:
             ext = os.path.splitext(name)[1].lower()[1:]
-        if ext in ('lab', 'dem', 'rec'):
+        if ext in ("lab", "dem", "rec"):
             return cls.read_lab(name, fs)
-        elif ext == 'textgrid':
+        elif ext == "textgrid":
             return cls.read_textgrid(name, fs)
         else:
             try:
@@ -1454,9 +1641,9 @@ class Partition(Track):
             raise ValueError("file '{}' has unknown format".format(name))
 
     @classmethod
-    def read_lab(cls, name, fs=300_000, encoding='UTF8'):
+    def read_lab(cls, name, fs=300_000, encoding="UTF8"):
         """load times, values from a label file"""
-        with codecs.open(name, 'r', encoding=encoding) as f:
+        with codecs.open(name, "r", encoding=encoding) as f:
             lines = f.readlines()
         if len(lines) == 0:
             raise ValueError("file '{}' is empty".format(name))
@@ -1467,29 +1654,39 @@ class Partition(Track):
             try:
                 t1, t2, label = line[:-1].split()
             except ValueError:
-                logger.warning('ignoring line "%s" in file %s at line %i' % (line, name, i + 1))
+                logger.warning(
+                    'ignoring line "%s" in file %s at line %i' % (line, name, i + 1)
+                )
                 continue
             t1 = float(t1)
             t2 = float(t2)
-            if label[-1] == '\r':
+            if label[-1] == "\r":
                 label = label[:-1]
             if len(time) == 0:
                 time.append(t1)
             else:
                 if time[-1] != t1:
-                    logger.warning('noncontiguous label "%s" in file %s at line %i, fixing' % (label, name, i + 1))
+                    logger.warning(
+                        'noncontiguous label "%s" in file %s at line %i, fixing'
+                        % (label, name, i + 1)
+                    )
             dur = t2 - time[-1]
             if dur > 0:
                 time.append(t2)
                 value.append(label)
             elif dur == 0:
-                logger.warning('zero-length label "%s" in file %s at line %i, ignoring' % (label, name, i+1))
+                logger.warning(
+                    'zero-length label "%s" in file %s at line %i, ignoring'
+                    % (label, name, i + 1)
+                )
             else:
-                raise LabreadError("label file contains times that are not monotonically increasing")
+                raise LabreadError(
+                    "label file contains times that are not monotonically increasing"
+                )
         if len(time) == 0:
-            raise(Exception('file is empty or all lines were ignored'))
+            raise (Exception("file is empty or all lines were ignored"))
         if time[0] != 0:
-            logger.warning('moving first label boundary to zero')
+            logger.warning("moving first label boundary to zero")
             time[0] = 0
             # or insert a first label
             # time.insert(0, 0)
@@ -1497,13 +1694,17 @@ class Partition(Track):
         time = numpy.round(numpy.array(time) * fs).astype(TIME_TYPE)
         # assert labels are not longer than 8 characters
         # value = numpy.array(value, dtype='U16' if label_type is str else numpy.float64)
-        value = numpy.array(value, dtype='U16')  # if label_type is str else numpy.float64)
-        return Partition(time, value, fs=fs, path=name)  # u1p to 16 characters (labels could be words)
+        value = numpy.array(
+            value, dtype="U16"
+        )  # if label_type is str else numpy.float64)
+        return Partition(
+            time, value, fs=fs, path=name
+        )  # u1p to 16 characters (labels could be words)
 
     @classmethod
-    def read_partition(cls, name, fs=48000, encoding='UTF8'):
+    def read_partition(cls, name, fs=48000, encoding="UTF8"):
         """load times, values from a label file"""
-        with codecs.open(name, 'r', encoding=encoding) as f:
+        with codecs.open(name, "r", encoding=encoding) as f:
             lines = f.readlines()
         if len(lines) == 0:
             raise ValueError("file '{}' is empty".format(name))
@@ -1514,10 +1715,12 @@ class Partition(Track):
             try:
                 t, _t, label = line[:-1].split()
             except ValueError:
-                logger.warning('ignoring line "%s" in file %s at line %i' % (line, name, i + 1))
+                logger.warning(
+                    'ignoring line "%s" in file %s at line %i' % (line, name, i + 1)
+                )
                 continue
             t = float(t)
-            if label[-1] == '\r':
+            if label[-1] == "\r":
                 label = label[:-1]
             try:
                 label = label_type(label)
@@ -1536,21 +1739,28 @@ class Partition(Track):
             if dur > 0:
                 value.append(label)
             elif dur == 0:
-                logger.warning('zero-length label "%s" in file %s at line %i, ignoring' % (label, name, i+1))
+                logger.warning(
+                    'zero-length label "%s" in file %s at line %i, ignoring'
+                    % (label, name, i + 1)
+                )
             else:
-                raise LabreadError("label file contains times that are not monotonically increasing")
+                raise LabreadError(
+                    "label file contains times that are not monotonically increasing"
+                )
         if len(time) == 1:
-            raise(Exception('file is empty or all lines were ignored'))
+            raise (Exception("file is empty or all lines were ignored"))
         if time[0] != 0:
-            logger.warning('moving first label boundary to zero')
+            logger.warning("moving first label boundary to zero")
             time[0] = 0
             # or insert a first label
             # time.insert(0, 0)
             # value.insert(0, default_label)
         time = numpy.round(numpy.array(time) * fs).astype(TIME_TYPE)
         # assert labels are not longer than 8 characters
-        value = numpy.array(value, dtype='U16' if label_type is str else numpy.float64)
-        return Partition(time, value, fs=fs)  # u1p to 16 characters (labels could be words)
+        value = numpy.array(value, dtype="U16" if label_type is str else numpy.float64)
+        return Partition(
+            time, value, fs=fs
+        )  # u1p to 16 characters (labels could be words)
 
     def write(self, name):
         """Saves object to name, adding default extension if missing."""
@@ -1561,18 +1771,20 @@ class Partition(Track):
         self.write_lab(name)
 
     def write_lab(self, file):
-        if hasattr(file, 'read'):
+        if hasattr(file, "read"):
             f = file
         else:
-            f = open(file, 'w')
+            f = open(file, "w")
         for i, v in enumerate(self._value):
-            f.write("%f %f %s\n" % (self._time[i] / self.fs, self._time[i + 1] / self.fs, v))
+            f.write(
+                "%f %f %s\n" % (self._time[i] / self.fs, self._time[i + 1] / self.fs, v)
+            )
         f.close()
 
     def write_partition(self, name):
         # written to generate a format exactly like
         # CMU-ARCTIC lab/*.lab files
-        f = open(name, 'w')
+        f = open(name, "w")
         f.write("#\n")
         for i, v in enumerate(self._value):
             f.write("%f 125 %s\n" % (self.fs, self._time[i + 1] / self.fs, v))
@@ -1606,22 +1818,35 @@ class Partition(Track):
     def __str__(self):
         s = [""]
         for i in range(len(self._value)):
-            s.append('#%i: %i/%.3f: %s :%i/%.3f\n' % (i, self._time[i], self._time[i] / self._fs, self._value[i],
-                                                      self._time[i + 1], self._time[i + 1] / self._fs))
+            s.append(
+                "#%i: %i/%.3f: %s :%i/%.3f\n"
+                % (
+                    i,
+                    self._time[i],
+                    self._time[i] / self._fs,
+                    self._value[i],
+                    self._time[i + 1],
+                    self._time[i + 1] / self._fs,
+                )
+            )
         s = "".join(s)
         return "%s\nfs=%i\nduration=%i" % (s, self._fs, self.duration)
 
     def __add__(self, other):
         if self._fs != other._fs:
             raise Exception("sampling frequencies must match")
-        time = numpy.hstack((self._time, self._time[-1] + other._time[1:]))  # other._time[0] == 0
+        time = numpy.hstack(
+            (self._time, self._time[-1] + other._time[1:])
+        )  # other._time[0] == 0
         value = numpy.hstack((self._value, other._value))
         # duration = self.duration + other.duration
         return Partition(time, value, self.fs)
 
     def crossfade(self, partition, length):
         """append to self, using a crossfade of a specified length in samples"""
-        assert type(self) == type(partition), "Cannot add Track objects of different types"
+        assert type(self) == type(
+            partition
+        ), "Cannot add Track objects of different types"
         assert self.fs == partition.fs, "sampling frequency of waves must match"
         assert isinstance(length, int)
         assert length > 0
@@ -1635,18 +1860,24 @@ class Partition(Track):
     def get(self, t):
         """returns current label at time t"""
         # return self.value[numpy.where((self.time - t) <= 0)[0][-1]] # last one that is <= 0
-        return self._value[(self._time.searchsorted(t + 1) - 1).clip(0, len(self._value) - 1)]
+        return self._value[
+            (self._time.searchsorted(t + 1) - 1).clip(0, len(self._value) - 1)
+        ]
 
     def append(self, time, value):
         """appends a value at the end, time is new endtime"""
         assert time > self._time[-1]
         self._time = numpy.hstack((self._time, time))
-        self._value = numpy.hstack((self._value, value))  # so values must be numpy objects after all ?
+        self._value = numpy.hstack(
+            (self._value, value)
+        )  # so values must be numpy objects after all ?
 
     def insert(self, time: int, value):
         """modifies partition object to include value at time - other times are unchanged"""
         assert not (time == self._time).any(), "this boundary exists already"
-        index = numpy.searchsorted(self._time, numpy.array([time]))[0]  # move _this_ index to the right
+        index = numpy.searchsorted(self._time, numpy.array([time]))[
+            0
+        ]  # move _this_ index to the right
         self._time = numpy.hstack((self._time[:index], time, self._time[index:]))
         # so values must be numpy objects after all ?
         self._value = numpy.hstack((self._value[:index], value, self._value[index:]))
@@ -1657,15 +1888,15 @@ class Partition(Track):
         """deletes a phoneme, leaves duration as is"""
         assert len(self._value) > 1
         assert 0 <= index < len(self._value)
-        self._time = numpy.hstack((self._time[:index], self._time[index+1:]))
-        self._value = numpy.hstack((self._value[:index], self._value[index+1:]))
+        self._time = numpy.hstack((self._time[:index], self._time[index + 1 :]))
+        self._value = numpy.hstack((self._value[:index], self._value[index + 1 :]))
 
     def delete_merge_right(self, index):
         """deletes a phoneme, leaves duration as is"""
         assert len(self._value) > 1
         assert 0 <= index < len(self._value)
-        self._time = numpy.hstack((self._time[:index+1], self._time[index+2:]))
-        self._value = numpy.hstack((self._value[:index], self._value[index+1:]))
+        self._time = numpy.hstack((self._time[: index + 1], self._time[index + 2 :]))
+        self._value = numpy.hstack((self._value[:index], self._value[index + 1 :]))
 
     def merge_same(self):  # rename to uniq?
         """return a copy of myself, except identical values will be merged"""
@@ -1676,10 +1907,12 @@ class Partition(Track):
             value = [self._value[0]]
             for i, v in enumerate(self._value[1:]):
                 if v != value[-1]:  # new value
-                    time.append(self._time[i+1])  # close last one, begin new one
+                    time.append(self._time[i + 1])  # close last one, begin new one
                     value.append(v)
             time.append(self.duration)
-            return Partition(numpy.array(time, dtype=TIME_TYPE), numpy.array(value), self.fs)
+            return Partition(
+                numpy.array(time, dtype=TIME_TYPE), numpy.array(value), self.fs
+            )
 
     def time_warp(self, X, Y):
         assert X[0] == 0
@@ -1694,7 +1927,11 @@ class Partition(Track):
         while 1:
             index = numpy.where(numpy.diff(self._time) == 0)[0]
             if len(index):
-                logger.warning('removing collapsed item #{}: "{}"'.format(index[0], self.value[index[0]]))
+                logger.warning(
+                    'removing collapsed item #{}: "{}"'.format(
+                        index[0], self.value[index[0]]
+                    )
+                )
                 self.delete_merge_right(index[0])
             else:
                 break
@@ -1702,6 +1939,7 @@ class Partition(Track):
 
 class Value(Track):
     """can store a singular value (e.g. comment string) of any type"""
+
     def __init__(self, value, fs, duration, path):
         super().__init__(path)
         assert isinstance(fs, int)
@@ -1718,9 +1956,11 @@ class Value(Track):
         self.value[k] = v
 
     def __eq__(self, other):
-        if (self._fs == other._fs) and \
-           (self._duration == other._duration) and \
-           isinstance(other.value, type(self.value)):
+        if (
+            (self._fs == other._fs)
+            and (self._duration == other._duration)
+            and isinstance(other.value, type(self.value))
+        ):
             return self.value == other.value
         else:
             return False
@@ -1734,11 +1974,13 @@ class Value(Track):
     def __str__(self):
         return self._value
 
-    def get_duration(self): return self._duration
+    def get_duration(self):
+        return self._duration
 
     def set_duration(self, duration):
         assert isinstance(duration, TIME_TYPE) or isinstance(duration, int)
         self._duration = duration
+
     duration = property(get_duration, set_duration, doc="duration of track")
 
     def get_value(self):
@@ -1746,6 +1988,7 @@ class Value(Track):
 
     def set_value(self, value):
         self._value = value
+
     value = property(get_value, set_value)
 
     def select(self, a, b):
@@ -1759,14 +2002,14 @@ class Value(Track):
         if name == os.path.splitext(name)[0]:
             if track_name is None:
                 raise ValueError("neither track name nor extension specified")
-            elif track_name == 'input':
-                ext = '.txt'
-            elif track_name == 'xml':
-                ext = '.xml'
-            elif track_name == 'search':
-                ext = '.search'
-            elif track_name == 'pronunciation':
-                ext = '.pron'
+            elif track_name == "input":
+                ext = ".txt"
+            elif track_name == "xml":
+                ext = ".xml"
+            elif track_name == "search":
+                ext = ".search"
+            elif track_name == "pronunciation":
+                ext = ".pron"
             else:
                 raise ValueError("unknown track name '{}'".format(track_name))
         else:
@@ -1778,15 +2021,15 @@ class Value(Track):
         """Loads object from name, adding extension if missing."""
         ext = cls.identify_ext(name, track_name)
         name = os.path.splitext(name)[0] + ext
-        if ext in ('.txt', '.xml', '.search'):
-            with open(name, 'r') as f:
+        if ext in (".txt", ".xml", ".search"):
+            with open(name, "r") as f:
                 value = f.read()
-                if ext == '.search':
+                if ext == ".search":
                     value = str(value, "UTF-8")
                 self = Value(value, fs, duration)
-        elif ext == '.pron':
-            with open(name, 'r') as f:
-                pron = [tuple(line.split('\t')) for line in f.read().split('\n')]
+        elif ext == ".pron":
+            with open(name, "r") as f:
+                pron = [tuple(line.split("\t")) for line in f.read().split("\n")]
                 self = Value(pron, fs, duration)
         else:
             raise ValueError("unknown extension '{}'".format(ext))
@@ -1798,232 +2041,251 @@ class Value(Track):
         """
         ext = self.identify_ext(name, track_name)
         name = os.path.splitext(name)[0] + ext
-        if ext in ('.txt', '.xml', '.search'):
-            with open(name, 'w') as f:
+        if ext in (".txt", ".xml", ".search"):
+            with open(name, "w") as f:
                 f.write(self.get_value())
-        elif ext == '.pron':
-            with open(name, 'w') as f:
-                f.write('\n'.join(word + '\t' + pron
-                                  for word, pron in self.get_value()))
+        elif ext == ".pron":
+            with open(name, "w") as f:
+                f.write(
+                    "\n".join(word + "\t" + pron for word, pron in self.get_value())
+                )
         else:
             raise ValueError("unknown extension '{}'".format(ext))
 
 
-class MultiTrack(dict):
-    """
-    A dictionary containing time-synchronous tracks of equal duration and fs
-    """
-    def __init__(self, mapping={}):
-        dict.__init__(self, mapping)
-        if __debug__:  # long assert - TODO: do this on mapping, and then assign
-            self.check()
+# class MultiTrack(dict):
+#     """
+#     A dictionary containing time-synchronous tracks of equal duration and fs
+#     """
 
-    def check(self):
-        if len(self) > 1:
-            for i, (key, track) in enumerate(self.items()):
-                if track.fs != self.fs:
-                    raise AssertionError(f"all fs' must be equal, track #{i} ('{key}) does not match track #1")
-                if track.duration != next(iter(self.values())).duration:
-                    raise AssertionError(f"all durations must be equal, track #{i} ('{key}'') does not match track #1")
+#     def __init__(self, mapping={}):
+#         dict.__init__(self, mapping)
+#         if __debug__:  # long assert - TODO: do this on mapping, and then assign
+#             self.check()
 
-    def get_fs(self):
-        if len(self):
-            return next(iter(self.values())).fs
-        else:
-            return 0  # or raise?
+#     def check(self):
+#         if len(self) > 1:
+#             for i, (key, track) in enumerate(self.items()):
+#                 if track.fs != self.fs:
+#                     raise AssertionError(
+#                         f"all fs' must be equal, track #{i} ('{key}) does not match track #1"
+#                     )
+#                 if track.duration != next(iter(self.values())).duration:
+#                     raise AssertionError(
+#                         f"all durations must be equal, track #{i} ('{key}'') does not match track #1"
+#                     )
 
-    def set_fs(self, fs):
-        raise Exception("Cannot change fs, try resample()")
-    fs = property(get_fs, set_fs, doc="sampling frequency")
+#     def get_fs(self):
+#         if len(self):
+#             return next(iter(self.values())).fs
+#         else:
+#             return 0  # or raise?
 
-    def get_duration(self):
-        if len(self):
-            if __debug__:  # long assert - TODO: do this on mapping, and then assign
-                self.check()
-            return next(iter(self.values())).duration
-        else:
-            return 0
+#     def set_fs(self, fs):
+#         raise Exception("Cannot change fs, try resample()")
 
-    def set_duration(self, duration):
-        raise Exception("The duration cannot be set, it is derived from its conents")
-    duration = property(get_duration, set_duration, doc="duration, as defined by its content")
+#     fs = property(get_fs, set_fs, doc="sampling frequency")
 
-    def __eq__(self, other):
-        # excluding wav from comparison as long as wav writing/reading is erroneous
-        if (set(self.keys()) - {'wav'}) != (set(other.keys()) - {'wav'}):
-            return False
-        for k in self.iterkeys():
-            if k != 'wav' and self[k] != other[k]:
-                return False
-        return True
+#     def get_duration(self):
+#         if len(self):
+#             if __debug__:  # long assert - TODO: do this on mapping, and then assign
+#                 self.check()
+#             return next(iter(self.values())).duration
+#         else:
+#             return 0
 
-    def __ne__(self, other):
-        return not self.__eq__(other)
+#     def set_duration(self, duration):
+#         raise Exception("The duration cannot be set, it is derived from its conents")
 
-    def __setitem__(self, key, value):
-        if len(self):
-            if value.duration != self.duration:
-                raise AssertionError("duration does not match")
-            if value.fs != self.fs:
-                raise AssertionError("fs does not match")
-        dict.__setitem__(self, key, value)
+#     duration = property(
+#         get_duration, set_duration, doc="duration, as defined by its content"
+#     )
 
-    def __str__(self):
-        s = ""
-        for key, track in self.iteritems():
-            s += "%s: %s\n" % (key, track)
-        return s
+#     def __eq__(self, other):
+#         # excluding wav from comparison as long as wav writing/reading is erroneous
+#         if (set(self.keys()) - {"wav"}) != (set(other.keys()) - {"wav"}):
+#             return False
+#         for k in self.keys():
+#             if k != "wav" and self[k] != other[k]:
+#                 return False
+#         return True
 
-    def __add__(self, other):
-        if self is other:
-            other = copy.deepcopy(other)
-        obj = type(self)()
-        for k in self:  # .iterkeys():
-            obj[k] = self[k] + other[k]
-        return obj
+#     def __ne__(self, other):
+#         return not self.__eq__(other)
 
-    def resample(self, fs):
-        multiTrack = type(self)()
-        for key, track in self.items():
-            multiTrack[key] = track.resample(fs)
-        return multiTrack
+#     def __setitem__(self, key, value):
+#         if len(self):
+#             if value.duration != self.duration:
+#                 raise AssertionError("duration does not match")
+#             if value.fs != self.fs:
+#                 raise AssertionError("fs does not match")
+#         dict.__setitem__(self, key, value)
 
-    def crossfade(self, other, length):
-        """
-        append multiTrack to self, using a crossfade of a specified length in samples
-        """
-        assert type(self) == type(other)
-        assert self.keys() == other.keys()
-        assert self.fs == other.fs
-        assert isinstance(length, int)
-        assert length > 0
-        assert other.duration >= length
-        assert self.duration >= length
-        multiTrack = type(self)()
-        for key, track in self.items():
-            multiTrack[key] = self[key].crossfade(other[key], length)
-        return multiTrack
+#     def __str__(self):
+#         s = ""
+#         for key, track in self.items():
+#             s += "%s: %s\n" % (key, track)
+#         return s
 
-    def select(self, a, b, keys=None):
-        assert a >= 0
-        assert a < b  # or a <= b?
-        assert b <= self.duration
-        """return a new multitrack object with all track views from time a to b"""
-        if keys is None:
-            keys = self.keys()
-        multiTrack = type(self)()
-        for key in keys:
-            multiTrack[key] = self[key].select(a, b)
-        return multiTrack
+#     def __add__(self, other):
+#         if self is other:
+#             other = copy.deepcopy(other)
+#         obj = type(self)()
+#         for k in self:  # .iterkeys():
+#             obj[k] = self[k] + other[k]
+#         return obj
 
-    # TODO: should this be deprecated in favor of / should this call - the more general time_warp function?
-    def scale_duration(self, factor):
-        if factor != 1:
-            for t in self.itervalues():
-                if isinstance(t, Partition):
-                    t.time *= factor  # last time parameter IS duration, so no worries about duration
-                elif isinstance(t, TimeValue) or isinstance(t, Event):
-                    if factor > 1:  # make room for expanded times
-                        t.duration = int(t.duration * factor)
-                        t.time *= factor
-                    else:
-                        t.time *= factor
-                        t.duration = int(t.duration * factor)
-                else:
-                    raise NotImplementedError  # wave?
+#     def resample(self, fs):
+#         multiTrack = type(self)()
+#         for key, track in self.items():
+#             multiTrack[key] = track.resample(fs)
+#         return multiTrack
 
-    def time_warp(self, x, y):
-        """in-place"""
-        for track in iter(self.values()):
-            track.time_warp(x, y)
+#     def crossfade(self, other, length):
+#         """
+#         append multiTrack to self, using a crossfade of a specified length in samples
+#         """
+#         assert type(self) == type(other)
+#         assert self.keys() == other.keys()
+#         assert self.fs == other.fs
+#         assert isinstance(length, int)
+#         assert length > 0
+#         assert other.duration >= length
+#         assert self.duration >= length
+#         multiTrack = type(self)()
+#         for key, _ in self.items():
+#             multiTrack[key] = self[key].crossfade(other[key], length)
+#         return multiTrack
 
-    default_suffix = '.mtt'
+#     def select(self, a, b, keys=None):
+#         assert a >= 0
+#         assert a < b  # or a <= b?
+#         assert b <= self.duration
+#         """return a new multitrack object with all track views from time a to b"""
+#         if keys is None:
+#             keys = self.keys()
+#         multiTrack = type(self)()
+#         for key in keys:
+#             multiTrack[key] = self[key].select(a, b)
+#         return multiTrack
 
-    @classmethod
-    def read(cls, name):
-        """Loads info about stored tracks from name, adding extension if missing,
-        and loads tracks by calling read(<name without extension>) for them.
-        """
-        name_wo_ext = os.path.splitext(name)[0]
-        if name == name_wo_ext:
-            name += cls.default_suffix
-        with open(name, 'rb') as mtt_file:
-            track_infos = json.load(mtt_file)
-        self = cls()
-        for track_type_name, track_info_list in track_infos:
-            track_type = globals()[track_type_name]
-            track_info = dict(track_info_list)
-            track = track_type.read(name_wo_ext, **track_info)
-            self[track_info['track_name']] = track
-        return self
+#     # TODO: should this be deprecated in favor of / should this call - the more general time_warp function?
+#     def scale_duration(self, factor):
+#         if factor != 1:
+#             for t in self.values():
+#                 if isinstance(t, Partition):
+#                     t.time *= (
+#                         factor
+#                     )  # last time parameter IS duration, so no worries about duration
+#                 elif isinstance(t, TimeValue) or isinstance(t, Event):
+#                     if factor > 1:  # make room for expanded times
+#                         t.duration = int(t.duration * factor)
+#                         t.time *= factor
+#                     else:
+#                         t.time *= factor
+#                         t.duration = int(t.duration * factor)
+#                 else:
+#                     raise NotImplementedError  # wave?
 
-    def write(self, name):
-        """Saves info about stored tracks to name, adding extension if missing,
-        and calls write(<name without extension>) for the contained tracks.
-        Note!: not saving wav as long as wav writing/reading is erroneous
-        """
-        name_wo_ext = os.path.splitext(name)[0]
-        if name == name_wo_ext:
-            name += self.default_suffix
-        track_infos = []  # list of dicts storing track info
-        for track_name, track in sorted(self.items()):
-            if track_name == 'wav':
-                continue
-            track_info = {'track_name': track_name,
-                          'fs': int(track.get_fs()),
-                          'duration': int(track.get_duration())}
-            if type(track) == Value:
-                track_info.update({'value_type': type(track.get_value()).__name__})
-            track.write(name_wo_ext, **track_info)
-            track_infos.append((type(track).__name__, sorted(track_info.items())))
-        with open(name, 'wb') as mtt_file:
-            json.dump(track_infos, mtt_file)
+#     def time_warp(self, x, y):
+#         """in-place"""
+#         for track in iter(self.values()):
+#             track.time_warp(x, y)
+
+#     default_suffix = ".mtt"
+
+#     @classmethod
+#     def read(cls, name):
+#         """Loads info about stored tracks from name, adding extension if missing,
+#         and loads tracks by calling read(<name without extension>) for them.
+#         """
+#         name_wo_ext = os.path.splitext(name)[0]
+#         if name == name_wo_ext:
+#             name += cls.default_suffix
+#         with open(name, "rb") as mtt_file:
+#             track_infos = json.load(mtt_file)
+#         self = cls()
+#         for track_type_name, track_info_list in track_infos:
+#             track_type = globals()[track_type_name]
+#             track_info = dict(track_info_list)
+#             track = track_type.read(name_wo_ext, **track_info)
+#             self[track_info["track_name"]] = track
+#         return self
+
+#     def write(self, name):
+#         """Saves info about stored tracks to name, adding extension if missing,
+#         and calls write(<name without extension>) for the contained tracks.
+#         Note!: not saving wav as long as wav writing/reading is erroneous
+#         """
+#         name_wo_ext = os.path.splitext(name)[0]
+#         if name == name_wo_ext:
+#             name += self.default_suffix
+#         track_infos = []  # list of dicts storing track info
+#         for track_name, track in sorted(self.items()):
+#             if track_name == "wav":
+#                 continue
+#             track_info = {
+#                 "track_name": track_name,
+#                 "fs": int(track.get_fs()),
+#                 "duration": int(track.get_duration()),
+#             }
+#             if type(track) == Value:
+#                 track_info.update({"value_type": type(track.get_value()).__name__})
+#             track.write(name_wo_ext, **track_info)
+#             track_infos.append((type(track).__name__, sorted(track_info.items())))
+#         with open(name, "wb") as mtt_file:
+#             json.dump(track_infos, mtt_file)
 
 
-class HetMultiTrack(MultiTrack):  # may want to define common abstract class instead
-    """
-    A dictionary containing time-synchronous tracks of equal duration, but HETEROGENOUS fs
-    """
+# class HetMultiTrack(MultiTrack):  # may want to define common abstract class instead
+#     """
+#     A dictionary containing time-synchronous tracks of equal duration, but HETEROGENOUS fs
+#     """
 
-    # this fs relates to the manner by which we time-index (possibly with float) into the multitrack object.
-    # Use 1.0 for seconds.
-    def __init__(self, mapping={}, fs=1.0):
-        dict.__init__(self, mapping)
-        if __debug__:  # long assert - TODO: do this on mapping, and then assign
-            self.check()
-        self._fs = fs
+#     # this fs relates to the manner by which we time-index (possibly with float) into the multitrack object.
+#     # Use 1.0 for seconds.
+#     def __init__(self, mapping=dict(), fs=1.0):
+#         dict.__init__(self, mapping)
+#         if __debug__:  # long assert - TODO: do this on mapping, and then assign
+#             self.check()
+#         self._fs = fs
 
-    def check(self):
-        if len(self) > 1:
-            duration = None
-            for i, (key, track) in enumerate(self.items()):
-                if duration is None:
-                    duration = track.duration / track.fs
-                if track.duration / track.fs != duration:
-                    raise AssertionError(f"all durations must be equal, track #{i} ('{key}') does not match track #1")
+#     def check(self):
+#         if len(self) > 1:
+#             duration = None
+#             for i, (key, track) in enumerate(self.items()):
+#                 if duration is None:
+#                     duration = track.duration / track.fs
+#                 if track.duration / track.fs != duration:
+#                     raise AssertionError(
+#                         f"all durations must be equal, track #{i} ('{key}') does not match track #1"
+#                     )
 
-    def get_fs(self):
-        if len(self):
-            return self._fs
-        else:
-            return 0  # or raise?
+#     def get_fs(self):
+#         if len(self):
+#             return self._fs
+#         else:
+#             return 0  # or raise?
 
-    def set_fs(self, fs):
-        self._fs = fs
-    fs = property(get_fs, set_fs, doc="sampling frequency of time-index")
+#     def set_fs(self, fs):
+#         self._fs = fs
 
-    def select(self, a, b, keys=None):
-        assert a >= 0
-        assert a < b  # or a <= b?
-        assert b <= self.duration
-        """return a new object with all track views from time a to b"""
-        if keys is None:
-            keys = self.keys()
-        obj = type(self)()
-        for key in keys:
-            trk = self[key]
-            obj[key] = trk.select(a / self._fs * trk._fs, b / self._fs * trk._fs)  # untested
-        return obj
+#     fs = property(get_fs, set_fs, doc="sampling frequency of time-index")
+
+#     def select(self, a, b, keys=None):
+#         assert a >= 0
+#         assert a < b  # or a <= b?
+#         assert b <= self.duration
+#         """return a new object with all track views from time a to b"""
+#         if keys is None:
+#             keys = self.keys()
+#         obj = type(self)()
+#         for key in keys:
+#             trk = self[key]
+#             obj[key] = trk.select(
+#                 a / self._fs * trk._fs, b / self._fs * trk._fs
+#             )  # untested
+#         return obj
 
 
 # class TestEvent(unittest.TestCase):
@@ -2061,18 +2323,18 @@ class HetMultiTrack(MultiTrack):  # may want to define common abstract class ins
 #         t = self.t.select(2, 6)
 #         self.assertTrue(t == Event(numpy.array([1], dtype=TIME_TYPE), 1, 4))
 
-    # def test_pml(self):
-    #     import tempfile
-    #     tmp = tempfile.NamedTemporaryFile(prefix='test_pml_')
-    #     filename = tmp.name
-    #     tmp.close()
-    #     self.t.pmlwrite(filename)
-    #     s = Event.pmlread(filename)
-    #     os.unlink(filename)
-    #     # duration CANNOT be encoded in the file (or can it?)
-    #     s.duration = int(numpy.round(self.t.duration * s.fs / self.t.fs))
-    #     s = s.resample(self.t.fs)
-    #     self.assertTrue(numpy.allclose(s.time, self.t.time))
+# def test_pml(self):
+#     import tempfile
+#     tmp = tempfile.NamedTemporaryFile(prefix='test_pml_')
+#     filename = tmp.name
+#     tmp.close()
+#     self.t.pmlwrite(filename)
+#     s = Event.pmlread(filename)
+#     os.unlink(filename)
+#     # duration CANNOT be encoded in the file (or can it?)
+#     s.duration = int(numpy.round(self.t.duration * s.fs / self.t.fs))
+#     s = s.resample(self.t.fs)
+#     self.assertTrue(numpy.allclose(s.time, self.t.time))
 
 
 # class TestWave(unittest.TestCase):
@@ -2080,8 +2342,8 @@ class HetMultiTrack(MultiTrack):  # may want to define common abstract class ins
 #         self.w = Wave(numpy.arange(0, 16000), 16000)
 #         self.v = Wave(numpy.arange(100, 200), 16000)
 
-    # def test_init(self):
-    #     t = Wave(numpy.array([], dtype=TIME_TYPE), 1)  # empty
+# def test_init(self):
+#     t = Wave(numpy.array([], dtype=TIME_TYPE), 1)  # empty
 
 #     def test_eq(self):
 #         self.assertTrue(self.w == self.w)
@@ -2304,4 +2566,3 @@ class HetMultiTrack(MultiTrack):  # may want to define common abstract class ins
 
 #     def test_timeValue(self):
 #         pass  # TODO: implement me!
-

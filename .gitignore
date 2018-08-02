@@ -6,7 +6,7 @@ bin/
 dist/
 include/
 lib/
-venv/
+.venv/
 
 # Cached python files
 *pycache*
@@ -32,7 +32,3 @@ timeview/manager/dataset.db
 
 # git .orig files
 *.orig
-
-
-
-

@@ -1,25 +1,57 @@
-language: python
-
+language: generic
+sudo: false
 env:
   global:
-    - PYTHON_VERSION=3.6
-    - MAIN_CMD='python setup.py'
-    - SETUP_CMD='test -v'
-    - SETUP_XVFB=true
-
+  - TEST_CMD='python -m pytest -vv -s tests'
+  - MAIN_CMD='pipenv run'
+  - SETUP_XVFB=true
+  - PIPENV_IGNORE_VIRTUALENVS=1
 matrix:
+  fast_finish: true
   include:
-    - os: linux
-      sudo: false
-    - os: osx
-      language: generic
-
-
+  - os: linux
+    env: PYTHON_VERSION=3.6
+  - os: linux
+    env: PYTHON_VERSION=3.7
+  - os: osx
+    language: generic
+    env: PYTHON_VERSION=3.6
+  - os: osx
+    language: generic
+    env: PYTHON_VERSION=3.7
+before_install:
+- git clone --depth 1 git://github.com/astropy/ci-helpers.git
+- source ci-helpers/travis/setup_conda.sh
+- source activate test
 install:
-  - git clone --depth 1 git://github.com/astropy/ci-helpers.git
-  - source ci-helpers/travis/setup_conda.sh
-
-script: 
-  # - xvfb-run pytest
-  - pip install ".[test]"
-  - $MAIN_CMD $SETUP_CMD
+- pip install pipenv --upgrade-strategy=only-if-needed
+- pipenv install --dev .
+script:
+- "$MAIN_CMD python --version"
+- "$MAIN_CMD $TEST_CMD"
+- "$MAIN_CMD black . --check"
+- "$MAIN_CMD flake8"
+notifications:
+  on_success: change
+  on_failure: always
+skip_commits:
+  files:
+  - docs/**/*
+  - "**/*.rst"
+  - "*.md"
+  - ".gitignore"
+  - appveyor.yml
+  - LICENSE.txt
+deploy:
+  provider: pypi
+  user: j9ac9k
+  password:
+    secure: rlLBnlr1NuzTXVBibn93+JBxemJrTIdvn10OTjZi6saFm9Vr1CqTAcr3R8libGXBscOW4Fj9txZeEt4txyHchWwVLp+oY90awKRAZ54VS8UQJ3C33Hvy8ZehNRfYE9BmaEIcFY2Q0z1962KpaBwbCIV2a2Vbf3rcfCpqyos7ThkGQ1n6HVljo5FJsdsIQg1C0jt4qHSagLYUhysyUFspr86HCFSMfcV+irh2QRVjVdEDN/UVnhiltHBsT2ty/fZs1eHPuTop1D4lOvmF+Y7BrOgucAdYs9TPm9rDd94TgqCWzYQPm3mLWjnzyoO5KCtPEDGHzfjLEhlL+xezafL+nCHC9QZ3R5MXoSiPoniF0DFOUjpsHHPLzwn8HYxiMn6GKa/io5BtsRB1MJjRKq3kGcRZg2arQlcLvw3Lk84Sxtr5woRBBoGORld7Q4Cye5pTWM9ne9Y0OToZdYDSnWBTPLt9+iIC7dcqKMC6ML00S8OU7MojUN0M2WudLtBMvWn/cseVVpoF1awdBCeMGQzekReqmKChxZWAefsxb167hj6+gu0KnhVOIXZ8twsucVvBgN+vr8REQ3DSXTopWOVzeD1l0DSKGUgm+LsbAhMPYiqZeNKmTFQjlsjCTa+XQTm++mwdcjpMPq5WZqE0XUgOFp6qgOYAV6reWgCNQaDDPEc=
+  distributions: sdist bdist_wheel
+  skip_existing: true
+  skip_cleanup: true
+  on:
+    tags: true
+    branch: master
+    repo: j9ac9k/timeview
+    condition: "$PYTHON_VERSION = 3.7"

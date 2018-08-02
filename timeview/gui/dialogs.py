@@ -21,15 +21,14 @@ class ProcessingError(Exception):
 
 
 class RenderDialog(QtWidgets.QDialog):
-
     def __init__(self, display_panel, renderer: Renderer) -> None:
         super().__init__()
         self.renderer = renderer
         self.panel = display_panel
-        self.setWindowTitle(f'Render Parameter Entry for {renderer.name}')
-        self.button_box =\
-            QtWidgets.QDialogButtonBox(QtWidgets.QDialogButtonBox.Ok |
-                                       QtWidgets.QDialogButtonBox.Cancel)
+        self.setWindowTitle(f"Render Parameter Entry for {renderer.name}")
+        self.button_box = QtWidgets.QDialogButtonBox(
+            QtWidgets.QDialogButtonBox.Ok | QtWidgets.QDialogButtonBox.Cancel
+        )
         self.button_box.accepted.connect(self.checkValues)
         self.button_box.rejected.connect(self.reject)
 
@@ -43,23 +42,24 @@ class RenderDialog(QtWidgets.QDialog):
         main_layout.addWidget(self.formGroupBox)
         main_layout.addWidget(self.button_box)
         self.setLayout(main_layout)
-        self.setWindowTitle(f'Parameter Entry for {renderer.name} Renderer')
+        self.setWindowTitle(f"Parameter Entry for {renderer.name} Renderer")
 
     def createParameterLayout(self):
         layout = QtWidgets.QFormLayout()
         for parameter, value in self.renderer.get_parameters().items():
             self.parameter_layout[parameter] = QtWidgets.QLineEdit()
             self.parameter_layout[parameter].setText(value)
-            layout.addRow(QtWidgets.QLabel(parameter),
-                          self.parameter_layout[parameter])
+            layout.addRow(QtWidgets.QLabel(parameter), self.parameter_layout[parameter])
         self.formGroupBox.setLayout(layout)
 
     def checkValues(self):
         for parameter, entry in self.parameter_layout.items():
-            user_input = entry.text().rstrip(']) ').lstrip('([ ')
-            logging.debug(f'For entry: {parameter} \t'
-                          f'user entered: {entry.text()} \t'
-                          f'saving as: {user_input}')
+            user_input = entry.text().rstrip("]) ").lstrip("([ ")
+            logging.debug(
+                f"For entry: {parameter} \t"
+                f"user entered: {entry.text()} \t"
+                f"saving as: {user_input}"
+            )
             self.parameters[parameter] = user_input
         try:
             # TODO: only pass the parameters that have been changed!
@@ -72,25 +72,25 @@ class RenderDialog(QtWidgets.QDialog):
 
 
 class ProcessingDialog(QtWidgets.QDialog):
-    relay_generated_tracks = Signal(tuple, name='relay_tracks')
+    relay_generated_tracks = Signal(tuple, name="relay_tracks")
 
-    def __init__(self,
-                 parent,
-                 processor: processing.Processor) -> None:
+    def __init__(self, parent, processor: processing.Processor) -> None:
         super().__init__(parent)
         self.setModal(False)
         self.parent = parent
         self.processor = processor
         self.abort_process = False
-        self.setWindowTitle(f'Track and Parameter Entry for {processor.name}')
+        self.setWindowTitle(f"Track and Parameter Entry for {processor.name}")
         self.buttonBox = QtWidgets.QDialogButtonBox()
 
-        self.rejectButton = QtWidgets.QPushButton('Cancel')
-        self.acceptButton = QtWidgets.QPushButton('Process')
-        self.buttonBox.addButton(self.acceptButton,
-                                 QtWidgets.QDialogButtonBox.AcceptRole)
-        self.buttonBox.addButton(self.rejectButton,
-                                 QtWidgets.QDialogButtonBox.RejectRole)
+        self.rejectButton = QtWidgets.QPushButton("Cancel")
+        self.acceptButton = QtWidgets.QPushButton("Process")
+        self.buttonBox.addButton(
+            self.acceptButton, QtWidgets.QDialogButtonBox.AcceptRole
+        )
+        self.buttonBox.addButton(
+            self.rejectButton, QtWidgets.QDialogButtonBox.RejectRole
+        )
         self.buttonBox.accepted.connect(self.preAccept)
         self.buttonBox.rejected.connect(self.reject)
         self.acceptButton.setEnabled(False)
@@ -102,7 +102,7 @@ class ProcessingDialog(QtWidgets.QDialog):
         self.parameters: Dict[str, str] = {}
 
         self.trackGroupBox = QtWidgets.QGroupBox("Track Selection")
-        self.parameterGroupBox = QtWidgets.QGroupBox('Parameter Selection')
+        self.parameterGroupBox = QtWidgets.QGroupBox("Parameter Selection")
 
         self.track_layout: Dict[QtWidgets.QComboBox, str] = {}
         self.parameter_layout: Dict[str, QtWidgets.QLineEdit] = {}
@@ -118,7 +118,8 @@ class ProcessingDialog(QtWidgets.QDialog):
 
     def checkCurrentSelections(self):
         current_selected_track = self.parent.getSelectedTrack()
-        for track_type in self.processor.acquire.values():
+        # for track_type in self.processor.acquire.values():
+        for track_type in self.processor.acquire._field_types.values():
             for combo_box in self.track_layout.keys():
                 if combo_box.count() == 1:
                     combo_box.setCurrentIndex(0)
@@ -137,31 +138,33 @@ class ProcessingDialog(QtWidgets.QDialog):
 
     def createTrackLayout(self):
         layout = QtWidgets.QFormLayout()
-        for track_name, track_type in self.processor.acquire.items():
+        for track_name, track_type in self.processor.acquire._field_types.items():
             combo_box = QtWidgets.QComboBox()
 
-            tracks = [view.track
-                      for panel in self.parent.model.panels
-                      for view in panel.views
-                      if isinstance(view.track, track_type)]
-            track_name_dict: Dict[str, Track] = {track.path.name: track
-                                                 for track in tracks}
+            tracks = [
+                view.track
+                for panel in self.parent.model.panels
+                for view in panel.views
+                if isinstance(view.track, track_type)
+            ]
+            track_name_dict: Dict[str, Track] = {
+                track.path.name: track for track in tracks
+            }
             self.tracks[track_name] = track_name_dict
             combo_box.addItems(track_name_dict.keys())
             combo_box.setCurrentIndex(-1)
             combo_box.currentIndexChanged.connect(self.setData)
             self.track_layout[combo_box] = track_name
-            layout.addRow(QtWidgets.QLabel(track_name),
-                          combo_box)
+            layout.addRow(QtWidgets.QLabel(track_name), combo_box)
         self.trackGroupBox.setLayout(layout)
 
-    @Slot(name='setData')
+    @Slot(name="setData")
     def setData(self):
         data: Optional[Dict[str, processing.Tracks]] = {}
         for combo_box, track_type in self.track_layout.items():
             track_name = combo_box.currentText()
-            if track_name == '':
-                logging.debug(f'{track_type} value entered is empty')
+            if track_name == "":
+                logging.debug(f"{track_type} value entered is empty")
                 return
             track = self.tracks[track_type][track_name]
             data[track_type] = track
@@ -169,8 +172,9 @@ class ProcessingDialog(QtWidgets.QDialog):
         try:
             self.processor.set_data(data)
         except processing.InvalidDataError:
-            logging.exception(f'Invalid data being passed to '
-                              f'{self.processor}.set_data()')
+            logging.exception(
+                f"Invalid data being passed to " f"{self.processor}.set_data()"
+            )
             raise
         parameters = self.processor.get_parameters()
         for parameter, value in parameters.items():
@@ -184,18 +188,18 @@ class ProcessingDialog(QtWidgets.QDialog):
             self.parameter_layout[parameter] = QtWidgets.QLineEdit()
             self.parameter_layout[parameter].setText(value)
             self.parameter_layout[parameter].setReadOnly(True)
-            layout.addRow(QtWidgets.QLabel(parameter),
-                          self.parameter_layout[parameter])
+            layout.addRow(QtWidgets.QLabel(parameter), self.parameter_layout[parameter])
         self.parameterGroupBox.setLayout(layout)
 
     def preAccept(self):
-        parameters = {parameter: line_edit.text()
-                      for parameter, line_edit
-                      in self.parameter_layout.items()}
+        parameters = {
+            parameter: line_edit.text()
+            for parameter, line_edit in self.parameter_layout.items()
+        }
         try:
             self.processor.set_parameters(parameters)
         except processing.InvalidParameterError:
-            logging.exception(f'Invalid Parameter entered')
+            logging.exception(f"Invalid Parameter entered")
             raise
         self.startThread()
 
@@ -204,24 +208,24 @@ class ProcessingDialog(QtWidgets.QDialog):
         self.acceptButton.setEnabled(False)
         self.process_bar.show()
         self.process_bar.setValue(0)
-        self.processor_thread = ProcessorThread(self.processor,
-                                                self.processor_finished,
-                                                self.update_process_bar)
+        self.processor_thread = ProcessorThread(
+            self.processor, self.processor_finished, self.update_process_bar
+        )
         self.parent.application.qtapp.aboutToQuit.connect(self.processor_thread.quit)
         self.buttonBox.rejected.disconnect()
         self.buttonBox.rejected.connect(self.abort)
         self.processor_thread.start()
 
-    @Slot(int, name='update_process_bar')
+    @Slot(int, name="update_process_bar")
     def update_process_bar(self, value: int):
         if self.abort_process:
             return
         self.process_bar.setValue(value)
 
-    @Slot(name='processor_terminated')
+    @Slot(name="processor_terminated")
     def abort(self):
         self.abort_process = True
-        logging.debug('Sending quit signal to processor thread')
+        logging.debug("Sending quit signal to processor thread")
         self.processor_thread.quit()
         self.processor_thread.abort = True
         self.process_bar.reset()
@@ -237,10 +241,10 @@ class ProcessingDialog(QtWidgets.QDialog):
         self.buttonBox.rejected.disconnect()
         self.buttonBox.rejected.connect(self.reject)
 
-    @Slot(tuple, name='processor_finished')
+    @Slot(tuple, name="processor_finished")
     def processor_finished(self, new_tracks):
-        logger.info('processor finished')
-        logger.info(f'abort status: {self.abort_process}')
+        logger.info("processor finished")
+        logger.info(f"abort status: {self.abort_process}")
         if self.abort_process:
             self.reject()
             self.close()
@@ -253,10 +257,10 @@ class About(QtWidgets.QMessageBox):
     def __init__(self):
         super().__init__()
         # You cannot easily resize a QMessageBox
-        self.setText('© Copyright 2009-2017, TimeView Developers')
+        self.setText("© Copyright 2009-2017, TimeView Developers")
         self.setStandardButtons(QtWidgets.QMessageBox.Ok)
         self.setDefaultButton(QtWidgets.QMessageBox.Ok)
-        self.setWindowTitle('About Timeview')
+        self.setWindowTitle("About Timeview")
 
 
 class Bug(QtWidgets.QDialog):
@@ -264,31 +268,31 @@ class Bug(QtWidgets.QDialog):
         super().__init__()
         self.app = app
         import traceback
-        self.setWindowTitle('Bug Report')
-        traceback_list = traceback.format_exception(exc_type,
-                                                    exc_value,
-                                                    exc_traceback)
-        self.traceback = ''.join([element.rstrip() + '\n'
-                                  for element in traceback_list])
-        self.buttonBox =\
-            QtWidgets.QDialogButtonBox(QtWidgets.QDialogButtonBox.Ok)
+
+        self.setWindowTitle("Bug Report")
+        traceback_list = traceback.format_exception(exc_type, exc_value, exc_traceback)
+        self.traceback = "".join(
+            [element.rstrip() + "\n" for element in traceback_list]
+        )
+        self.buttonBox = QtWidgets.QDialogButtonBox(QtWidgets.QDialogButtonBox.Ok)
         self.buttonBox.accepted.connect(self.accept)
-        copyButton = QtWidgets.QPushButton('Copy To Clipboard')
+        copyButton = QtWidgets.QPushButton("Copy To Clipboard")
         copyButton.pressed.connect(self.copyToClipboard)
-        self.buttonBox.addButton(copyButton,
-                                 QtWidgets.QDialogButtonBox.ApplyRole)
+        self.buttonBox.addButton(copyButton, QtWidgets.QDialogButtonBox.ApplyRole)
 
         main_layout = QtWidgets.QVBoxLayout()
         self.textEdit = QtWidgets.QTextEdit()
         self.textEdit.setLineWrapMode(0)
-        self.textEdit.setText(self.traceback.replace('\n', '\r'))
+        self.textEdit.setText(self.traceback.replace("\n", "\r"))
         self.textEdit.setReadOnly(True)
 
         main_layout.addWidget(self.textEdit)
         main_layout.addWidget(self.buttonBox)
-        self.setFixedWidth(self.textEdit.width() +
-                           main_layout.getContentsMargins()[0] +
-                           main_layout.getContentsMargins()[2])
+        self.setFixedWidth(
+            self.textEdit.width()
+            + main_layout.getContentsMargins()[0]
+            + main_layout.getContentsMargins()[2]
+        )
         self.setLayout(main_layout)
 
     def copyToClipboard(self):
@@ -298,14 +302,14 @@ class Bug(QtWidgets.QDialog):
 
 
 class HelpBrowser(QtWidgets.QTextBrowser):
-    def __init__(self,
-                 help_engine: QtHelp.QHelpEngine,
-                 parent: QtWidgets.QWidget=None) -> None:
+    def __init__(
+        self, help_engine: QtHelp.QHelpEngine, parent: QtWidgets.QWidget = None
+    ) -> None:
         super().__init__(parent)
         self.help_engine = help_engine
 
     def loadResource(self, typ: int, name: QtCore.QUrl):
-        if name.scheme() == 'qthelp':
+        if name.scheme() == "qthelp":
             return QtCore.QVariant(self.help_engine.fileData(name))
         else:
             return super().loadResource(typ, name)
@@ -318,7 +322,7 @@ class InfoDialog(QtWidgets.QMessageBox):
         self.setText(info_string)
         self.setStandardButtons(QtWidgets.QMessageBox.Ok)
         self.setDefaultButton(QtWidgets.QMessageBox.Ok)
-        self.setWindowTitle('Track info')
+        self.setWindowTitle("Track info")
 
 
 class ProgressTracker(QtCore.QObject):
@@ -331,12 +335,11 @@ class ProgressTracker(QtCore.QObject):
 # look at example here:
 # https://stackoverflow.com/questions/25108321/how-to-return-value-from-function-running-by-qthread-and-queue
 class ProcessorThread(QtCore.QThread):
-    finished = Signal(tuple, name='finished')
+    finished = Signal(tuple, name="finished")
 
-    def __init__(self,
-                 processor: processing.Processor,
-                 callback,
-                 update_process_bar) -> None:
+    def __init__(
+        self, processor: processing.Processor, callback, update_process_bar
+    ) -> None:
         super().__init__()
         self.finished.connect(callback)
         self.processor = processor
@@ -347,10 +350,11 @@ class ProcessorThread(QtCore.QThread):
     def __del__(self):
         self.wait()
 
-    def process(self) -> Tuple[Union[processing.Tracks]]:
+    def process(self) -> Tuple[Union[processing.Tracks], ...]:
         try:
-            new_track_list =\
-                self.processor.process(progressTracker=self.progressTracker)
+            new_track_list = self.processor.process(
+                progressTracker=self.progressTracker
+            )
         except Exception as e:
             logging.exception("Processing Error")
             logging.exception(str(e))
