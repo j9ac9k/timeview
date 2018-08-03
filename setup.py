@@ -21,8 +21,8 @@ REQUIRED = [
     "qtpy",
     "pyqtgraph",
     "qtawesome",
-    "pyedflib",
-    "cython",
+    "pyedflib;python_version<'3.7'",
+    "cython;python_version<'3.7'",
 ]
 
 TESTS_REQUIRE = ["pytest", "pytest-qt", "pytest-runner"]
